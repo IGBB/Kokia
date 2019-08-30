@@ -1,0 +1,57 @@
+#+Title: Kokia raw files
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Nanopore 
+|          |    QC |         QC |   Run |        Run |        |
+| ID       | Pores |       Date | Pores |       Date | Output |
+|----------+-------+------------+-------+------------+--------|
+| FAL29342 |  1573 | 2019-08-13 |  1536 | 2019-08-26 |        |
+| FAL22953 |  1181 | 2019-08-13 |  1161 | 2019-08-26 |        |
+| FAL18435 |  1282 | 2019-08-13 |  1253 | 2019-08-26 |        |
+| FAL18647 |  1270 | 2019-08-13 |  1210 | 2019-08-26 |        |
+| FAL29558 |  1368 | 2019-08-13 |  1362 | 2019-08-26 |        |
+
+
+#+NAME: files
+| FAL22953 | 20190826_1854_GA20000_FAL22953_79be28df |
+| FAL18435 | 20190826_1854_GA30000_FAL18435_98887108 |
+
+
+#+BEGIN_SRC sh :tangle nanopore/combine.sh
+
+find $DIR/nanopore -name fastq_pass -o -name fastq_fail |
+    while read dir; do
+        find $dir -type f |
+            xargs cat |
+            gzip > $dir.fastq.gz;
+    done
+
+find $DIR/nanopore -name fast5_pass -o -name fast5_fail |
+    while read dir; do
+        tar -cf $dir.tar $dir
+        split -b 50G $dir.tar $dir.tar.
+    done
+
+
+#+END_SRC
+
+| ID | Fastq |
+|----+-------|
+| X1 |       |
+| X2 |       |
+| X3 |       |
+| X4 |       |
+| X5 |       |
+
+             
+
+* Illumina
+
+| SRA       |
+| Accession |
+|-----------|
+|           |
+
+* Hi-C
+
+* RNA-Seq
