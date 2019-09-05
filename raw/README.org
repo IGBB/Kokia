@@ -11,23 +11,27 @@
 | FAL18647 |  1270 | 2019-08-13 |  1210 | 2019-08-26 |        |
 | FAL29558 |  1368 | 2019-08-13 |  1362 | 2019-08-26 |        |
 
-
 #+NAME: files
+| FAL29342 | 20190826_1854_GA10000_FAL29342_89e34370 |
 | FAL22953 | 20190826_1854_GA20000_FAL22953_79be28df |
 | FAL18435 | 20190826_1854_GA30000_FAL18435_98887108 |
+| FAL18647 | 20190826_1854_GA40000_FAL18647_98f13006 |
+| FAL29558 | 20190826_1854_GA50000_FAL29558_fd9e83e6 |
 
 
 #+BEGIN_SRC sh :tangle nanopore/combine.sh
 
-find $DIR/nanopore -name fastq_pass -o -name fastq_fail |
+find $DIR/nanopore -name fastq_pass -o -name fastq_fail -o -name fastq_new |
     while read dir; do
+        [ -e $dir.fastq.gz ] && continue
         find $dir -type f |
             xargs cat |
             gzip > $dir.fastq.gz;
     done
 
-find $DIR/nanopore -name fast5_pass -o -name fast5_fail |
+find $DIR/nanopore -name fast5_pass -o -name fast5_fail -o -name fast5_skip |
     while read dir; do
+        [ -e $dir.tar ] && continue
         tar -cf $dir.tar $dir
         split -b 50G $dir.tar $dir.tar.
     done
