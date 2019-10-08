@@ -1,2 +1,2 @@
 # Kokia
-Imporved Kokia Genome
+Improved Kokia Genome
