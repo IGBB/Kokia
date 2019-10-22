@@ -1,0 +1,73 @@
+#+Title: Canu
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+
+#+BEGIN_SRC sh :tangle run.sh
+cd $DIR
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+#docker://biocontainers/canu:v1.8dfsg-2-deb_cv1
+
+canu () { singularity exec -B$ROOT $DIR/canu-1.8.sif canu "$@" ; }
+
+canu \
+ -p kokia -d $DIR \
+ genomeSize=590m \
+ maxThreads=$PBS_NUM_PPN \
+ -nanopore-raw $DIR/../../0-filter/ont/filtered.fq.gz
+
+#+END_SRC
+
+#+HEADER: :prepend #PBS -l walltime=4:00:00 -t 1-512
+#+BEGIN_SRC sh :tangle scout.correction.sh
+cd $DIR/correction/2-correction
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+#docker://biocontainers/canu:v1.8dfsg-2-deb_cv1
+
+singularity exec -B$ROOT $DIR/canu-1.8.sif \
+   $DIR/correction/2-correction/correctReads.sh $PBS_ARRAYID \
+   > correctReads.$(printf "%06d" $PBS_ARRAYID).out
+
+
+
+#+END_SRC
+
+#+HEADER: :prologue #PBS -l walltime=5:00:00 -t 1-102
+#+BEGIN_SRC sh :tangle scout.overlapper.sh
+cd $DIR/trimming/1-overlapper
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+#docker://biocontainers/canu:v1.8dfsg-2-deb_cv1
+
+singularity exec -B$ROOT $DIR/canu-1.8.sif \
+   $DIR/trimming/1-overlapper/overlap.sh $PBS_ARRAYID \
+   > overlap.$(printf "%06d" $PBS_ARRAYID).out
+
+
+
+#+END_SRC
+
+#+HEADER: :prologue #PBS -l walltime=8:00:00 -t 1-100
+#+BEGIN_SRC sh :tangle scout.unitigging-overlapper.sh
+cd $DIR/unitigging/1-overlapper
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+#docker://biocontainers/canu:v1.8dfsg-2-deb_cv1
+
+singularity exec -B$ROOT $DIR/canu-1.8.sif \
+   $DIR/unitigging/1-overlapper/overlap.sh $PBS_ARRAYID \
+   > overlap.$(printf "%06d" $PBS_ARRAYID).out
+
+
+
+#+END_SRC
+
+|    n | n:500 | L50 |  min |    N75 |     N50 |     N25 |  E-size |     max |     sum | name                |
+|------+-------+-----+------+--------+---------+---------+---------+---------+---------+---------------------|
+| 1408 |  1408 |  74 | 1020 | 883004 | 1999846 | 3874275 | 2602559 | 9415686 | 532.8e6 | kokia.contigs.fasta |
+

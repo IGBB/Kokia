@@ -1,0 +1,23 @@
+#+Title: WTDBG2
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Assemble filtered reads
+#+HEADER: :prologue #PBS -N wtdbg2 -l walltime=48:00:00
+#+BEGIN_SRC sh :tangle assemble.sh
+cd $DIR/
+ROOT=$(git rev-parse --show-toplevel)
+
+PATH=$PATH:$DIR/bin/
+
+wtdbg2 -x ont -g 590m -t $PBS_NUM_PPN -i $DIR/../../0-filter/ont/filtered.fq.gz  -fo $DIR/kokia
+#+END_SRC
+* Derive Consensus
+#+HEADER: :prologue #PBS -N wtdbg2_consenser -l walltime=48:00:00
+#+BEGIN_SRC sh :tangle consensus.sh
+cd $DIR/
+ROOT=$(git rev-parse --show-toplevel)
+
+PATH=$PATH:$DIR/bin/
+
+wtpoa-cns -t $PBS_NUM_PPN -i $DIR/kokia.ctg.lay.gz -fo $DIR/kokia.raw.fa
+#+END_SRC

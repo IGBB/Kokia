@@ -1,0 +1,9 @@
+*          annex.largefiles=(largerthan=100kb)
+*.gz       annex.largefiles=anything
+*.tar      annex.largefiles=anything
+*.bam      annex.largefiles=anything
+*.sig      annex.largefiles=anything
+*.simg     annex.largefiles=anything
+README.org annex.largefiles=nothing
+*.png      annex.largefiles=nothing
+*.jpg      annex.largefiles=nothing

@@ -1,0 +1,6 @@
+#+Title: Assembly
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Methods
+
+#+INCLUDE: "./0-filter/README.org::*Methods" :only-contents t
