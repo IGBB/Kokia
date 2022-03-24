@@ -1,0 +1,92 @@
+#+TITLE: GBS samples
+
+* Dried Tissue
+
+| IGBB sample ID | Species            | Line ID          |
+|----------------+--------------------+------------------|
+| Kd-3041        | Kokia drynarioides | HA-PWM-A_3041    |
+| Kd-3042        | Kokia drynarioides | HA-PWM-A_3042    |
+| Kd-3043        | Kokia drynarioides | HA-PWM-A_3043    |
+| Kc-F1          | Kokia cookei       | MO-LCC-F1        |
+| Kc-0001        | Kokia cookei       | MA-AH1-A-0001    |
+| Kc-01/01       | Kokia cookei       | MA-AH1-A # 01/01 |
+| Kc-02          | Kokia cookei       | MA-AH1-A # 02    |
+| Kc-03          | Kokia cookei       | MA-AH1-A # 03    |
+| Kc-04          | Kokia cookei       | MA-AH1-A # 04    |
+| Kc-05          | Kokia cookei       | MA-AH1-A # 05    |
+| Kc-06          | Kokia cookei       | MA-AH1-A # 06    |
+| Kc-07          | Kokia cookei       | MA-AH1-A # 07    |
+| Kc-08          | Kokia cookei       | MA-AH1-A # 08    |
+| Kc-09          | Kokia cookei       | MA-AH1-A # 09    |
+| Kc-10          | Kokia cookei       | MA-AH1-A # 10    |
+| Kc-11          | Kokia cookei       | MA-AH1-A # 11    |
+
+* DNA
+
+|         Sample ID | Species                   |
+|-------------------+---------------------------|
+|              3148 | Kokia cookei              |
+|              3149 | Kokia drynarioides        |
+|              3150 | Kokia drynarioides        |
+|              3151 | Kokia kauaiensis          |
+|              3152 | Kokia kauaiensis          |
+|              3153 | Kokia kauaiensis          |
+|              3154 | Kokia kauaiensis          |
+|              3155 | Kokia kauaiensis          |
+|              3162 | Kokia kauaiensis          |
+|              3163 | Kokia kauaiensis          |
+|              3156 | Kokia kauaiensis          |
+|              3157 | Kokia kauaiensis          |
+|              3158 | Kokia kauaiensis          |
+|              3159 | Kokia kauaiensis          |
+|              3160 | Kokia kauaiensis          |
+|            3160_2 | Kokia kauaiensis          |
+|              3161 | Kokia kauaiensis          |
+|              3162 | Kokia kauaiensis          |
+|              3163 | Kokia kauaiensis          |
+|              3164 | Kokia kauaiensis          |
+|              3165 | Kokia kauaiensis          |
+|              3166 | Kokia kauaiensis          |
+|              3167 | Kokia kauaiensis          |
+|              3168 | Kokia kauaiensis          |
+| 3160_re-extracted | Kokia kauaiensis          |
+|              3169 | Kokia kauaiensis          |
+|              3170 | Kokia kauaiensis          |
+|              3171 | Kokia kauaiensis          |
+|              3172 | Kokia kauaiensis          |
+|              3172 | Kokia kauaiensis          |
+|              3174 | Kokia kauaiensis          |
+|              3175 | Kokia kauaiensis          |
+|              3176 | Kokia kauaiensis          |
+|   3164_re_extract | Kokia kauaiensis          |
+|              3177 | Kokia kauaiensis          |
+|              3178 | Kokia kauaiensis          |
+|              3179 | Kokia kauaiensis          |
+|              3180 | Kokia kauaiensis          |
+|              3181 | Kokia kauaiensis          |
+|              3182 | Kokia kauaiensis          |
+|              3183 | Kokia kauaiensis          |
+|              3184 | Kokia kauaiensis          |
+|   3169_re-extract | Kokia kauaiensis          |
+|              3185 | Kokia kauaiensis          |
+|              3186 | Kokia kauaiensis          |
+|              3187 | Kokia kauaiensis          |
+|              3188 | Kokia kauaiensis          |
+|              3189 | Kokia kauaiensis          |
+|              3190 | Kokia kauaiensis          |
+|              3191 | Kokia kauaiensis          |
+|              3192 | Kokia kauaiensis          |
+|   3170_re-extract | Kokia kauaiensis          |
+|              3193 | Kokia kauaiensis          |
+|              3194 | Kokia kauaiensis          |
+|              3195 | Kokia kauaiensis          |
+|              3215 | Kokia kauaiensis          |
+|              8046 | Kokia sp. cf.drynarioides |
+|              3330 | Kokia kauaiensis          |
+|              3331 | Kokia kauaiensis          |
+|              3332 | Kokia kauaiensis          |
+|              3333 | Kokia kauaiensis          |
+|               283 | Kokia drynarioides        |
+|              1780 | Kokia drynarioides        |
+|              4372 | Kokia cookei              |
+|              4373 | Kokia cookei              |

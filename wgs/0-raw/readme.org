@@ -1,0 +1,145 @@
+#+TITLE: Whole Genome Sequencing Samples
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Kokia cookei C69
+
+* Kokia kauaiensis S9
+
+* Kokia drynarioides JFW-HI
+Biosample: SAMN07559306
+
+** Nanopore
+
+|          |    QC |         QC |   Run |        Run |
+| ID       | Pores |       Date | Pores |       Date |
+|----------+-------+------------+-------+------------|
+| FAL29342 |  1573 | 2019-08-13 |  1536 | 2019-08-26 |
+| FAL22953 |  1181 | 2019-08-13 |  1161 | 2019-08-26 |
+| FAL18435 |  1282 | 2019-08-13 |  1253 | 2019-08-26 |
+| FAL18647 |  1270 | 2019-08-13 |  1210 | 2019-08-26 |
+| FAL29558 |  1368 | 2019-08-13 |  1362 | 2019-08-26 |
+
+#+NAME: kd-nanopore-runs
+| ID       | Directory                                            |
+|----------+------------------------------------------------------|
+| FAL29342 | kd/nanopore/20190826_1854_GA10000_FAL29342_89e34370/ |
+| FAL22953 | kd/nanopore/20190826_1854_GA20000_FAL22953_79be28df/ |
+| FAL18435 | kd/nanopore/20190826_1854_GA30000_FAL18435_98887108/ |
+| FAL18647 | kd/nanopore/20190826_1854_GA40000_FAL18647_98f13006/ |
+| FAL29558 | kd/nanopore/20190826_1854_GA50000_FAL29558_fd9e83e6/ |
+
+
+*** cleanup/backup
+
+- Since lustre doesn't like lots of small files, =tar= the fast5 and fastq
+  directories. Run =md5sum= pre- and post- =tar= for paranoia. Not =gzip='ing
+  since the data being =tar='d is already compressed. Consolidate duplex run
+  into pass/fail fastq files.
+
+  Base-calling for two of the runs was cut short and restarted. Combining the
+  original call directory (fastq_pass) and the restart directory (fastq_new)
+  into the fastq_pass.tar.gz
+
+  #+begin_src sh :tangle backup.nano.sh :var flowcells=nanopore-runs[,1]
+  for id in "${flowcells[@]}"; do
+      pushd $DIR/$id/
+
+      gzip *_sequencing_summary.txt fastq_{pass,fail}/*.fastq
+      for dir in fast{5,q}_{fail,pass} fast5_skip; do
+          [ -d $dir ] || continue
+          find $dir -type f -execdir md5sum {} \; > $dir.pre.md5
+          tar -C $dir -vcf $dir.tar ./
+          tar --to-command=md5sum -vxf $dir.tar |
+              awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+                  RS='./' FS="[\n ]" > $dir.post.md5
+          diff $dir.{pre,post}.md5
+      done
+
+      if [ -d "fastq_new" ] ; then
+          gzip fastq_new/*.fastq
+          find fastq_new -type f -execdir md5sum {} \; >> fastq_pass.pre.md5
+          tar -C $dir -vaf $dir.tar ./
+          tar --to-command=md5sum -vxf $dir.tar |
+              awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+                  RS='./' FS="[\n ]" > $dir.post.md5
+          diff $dir.{pre,post}.md5
+      fi
+
+
+      popd
+done
+  #+end_src
+
+- The following will get the fastq data from the tar file into a single fastq.gz
+  file
+  #+begin_src sh :tangle restore.nano.sh :var flowcells=nanopore-runs[,1]
+  ROOT=$(git rev-parse --show-toplevel)
+
+  for dir in "${flowcells[@]}"; do
+      tar -Oxf $DIR/$dir/fastq_pass.tar > $DIR/$dir/fastq_pass.fq.gz
+  done
+  #+end_src
+
+- Add data to git-annex
+  #+begin_src sh :tangle git.nano.sh :var flowcells=nanopore-runs[,1]
+  for id in "${flowcells[@]}"; do
+      pushd $DIR/$id/
+
+      git annex add sequencing_summary_*.txt.gz \
+          fast?_{pass,fail}.tar \
+          fastq_pass.fq.gz \
+          duplex/{pass,fail}.fq.gz \
+          duplex/sequencing_summary.txt.gz
+          report*.md
+
+  done
+  #+end_src
+
+** Illumina
+
+#+Name: kd-illumina-sra
+| Run        | InsertSize | Instrument          |
+|------------+------------+---------------------|
+| SRR6195037 |        350 | Illumina MiSeq      |
+| SRR6195036 |        350 | Illumina MiSeq      |
+| SRR6195040 |        350 | Illumina HiSeq 2000 |
+| SRR6195039 |        550 | Illumina MiSeq      |
+| SRR6195038 |        550 | Illumina MiSeq      |
+| SRR6195041 |        550 | Illumina HiSeq 2000 |
+
+#+header: :var acc=kd-illumina-sra[,0]
+#+begin_src sh :tangle kd/illumina/download.sra.sh
+cd $DIR/kd/illumina/
+
+for SRA in "${acc[@]}"; do
+
+    URL=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/${SRA:0:6}/
+
+    if [ ${#SRA} -gt 9 ]; then
+        DIR=00${SRA:9}
+        URL+=${DIR: -3}/
+    fi
+
+    URL+=$SRA
+
+    wget $URL/${SRA}_1.fastq.gz
+    wget $URL/${SRA}_2.fastq.gz
+
+done
+#+end_src
+
+** Hi-C
+
+Hi-C library made by Phase-Genomics
+
+#+name: kd-hic
+| name   | forward                         | reverse                         |
+|--------+---------------------------------+---------------------------------|
+| kd-hic | kd/hi-c/kokia_S3HiC_R1.fastq.gz | kd/hi-c/kokia_S3HiC_R2.fastq.gz |
+
+
+** RNA-Seq
+
+| Run        | Instrument  |
+|------------+-------------|
+| SRR6195950 | HiSeq X Ten |

@@ -1,2 +1,0 @@
-# Kokia
-Imporved Kokia Genome
