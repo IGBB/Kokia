@@ -28,6 +28,29 @@ Biosample: SAMN07559306
 | FAL18647 | kd/nanopore/20190826_1854_GA40000_FAL18647_98f13006/ |
 | FAL29558 | kd/nanopore/20190826_1854_GA50000_FAL29558_fd9e83e6/ |
 
+#+Name: sum-stats
+#+Caption: Summary statistics of Kokia drynarioides nanopore runs
+#+begin_src sh :tangle sum-stats.sh :var flowcells=kd-nanopore-runs
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+abyss-fac () {
+    singularity exec -B$ROOT \
+        /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+        /usr/lib/abyss/abyss-fac $@
+}
+
+for name in "${!flowcells[@]}"; do
+     abyss-fac $DIR/${flowcells[$name]}/fastq_pass.fq.gz
+done
+#+end_src
+| name     |       n |   n:500 |    L50 | min |  N75 |  N50 |   N25 | E-size |    max |     sum |
+|----------+---------+---------+--------+-----+------+------+-------+--------+--------+---------|
+| FAL29342 | 3309350 | 3211137 | 713370 | 500 | 4115 | 7720 | 12006 |   8683 |  81964 | 16.96e9 |
+| FAL22953 | 2013654 | 1945000 | 438810 | 500 | 4756 | 8569 | 12689 |   9390 |  74154 | 11.17e9 |
+| FAL18435 | 2630147 | 2566886 | 604515 | 500 | 4446 | 7996 | 11762 |   8732 |  85075 | 14.27e9 |
+| FAL18647 | 3139279 | 3066621 | 832101 | 500 | 4585 | 6987 |  9652 |   7577 | 158915 | 16.37e9 |
+| FAL29558 | 2874891 | 2794287 | 696116 | 500 | 4371 | 7130 | 10202 |   7773 |  84269 | 14.35e9 |
 
 *** cleanup/backup
 
@@ -38,9 +61,9 @@ Biosample: SAMN07559306
 
   Base-calling for two of the runs was cut short and restarted. Combining the
   original call directory (fastq_pass) and the restart directory (fastq_new)
-  into the fastq_pass.tar.gz
+  into the fastq_pass.tar.gz. The restarted reads start with =fastq_runid_=.
 
-  #+begin_src sh :tangle backup.nano.sh :var flowcells=nanopore-runs[,1]
+  #+begin_src sh :tangle backup.nano.sh :var flowcells=kd-nanopore-runs[,1]
   for id in "${flowcells[@]}"; do
       pushd $DIR/$id/
 
@@ -52,17 +75,21 @@ Biosample: SAMN07559306
           tar --to-command=md5sum -vxf $dir.tar |
               awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
                   RS='./' FS="[\n ]" > $dir.post.md5
-          diff $dir.{pre,post}.md5
+          diff $dir.{pre,post}.md5 > $dir.md5.check
       done
 
       if [ -d "fastq_new" ] ; then
           gzip fastq_new/*.fastq
+
+          gzip --stdout fastq_new/sequencing_summary.txt >> *_sequencing_summary.txt.gz
+          rm fastq_new/*.log fastq_new/sequencing_summary.txt fastq_new/sequencing_telemetry.js
+
           find fastq_new -type f -execdir md5sum {} \; >> fastq_pass.pre.md5
-          tar -C $dir -vaf $dir.tar ./
-          tar --to-command=md5sum -vxf $dir.tar |
+          tar -C fastq_new -vrf fastq_pass.tar ./
+          tar --to-command=md5sum -vxf fastq_pass.tar |
               awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
-                  RS='./' FS="[\n ]" > $dir.post.md5
-          diff $dir.{pre,post}.md5
+                  RS='./' FS="[\n ]" > fastq_pass.post.md5
+          diff fastq_pass.{pre,post}.md5  > fastq_pass.md5.check
       fi
 
 
@@ -72,7 +99,7 @@ done
 
 - The following will get the fastq data from the tar file into a single fastq.gz
   file
-  #+begin_src sh :tangle restore.nano.sh :var flowcells=nanopore-runs[,1]
+  #+begin_src sh :tangle restore.nano.sh :var flowcells=kd-nanopore-runs[,1]
   ROOT=$(git rev-parse --show-toplevel)
 
   for dir in "${flowcells[@]}"; do
@@ -80,18 +107,31 @@ done
   done
   #+end_src
 
+  FAL29558 and FAL18435 had malformed fastq files. Excluding them since we have
+  coverage to spare.
+  #+begin_src sh
+
+tar -Oxf $DIR/kd/nanopore/20190826_1854_GA50000_FAL29558_fd9e83e6/fastq_pass.tar \
+    --exclude=./FAL29558_c95ea3ae2ba850cfa310d38dc7f59268d6e2e2b8_628.fastq.gz \
+    > $DIR/kd/nanopore/20190826_1854_GA50000_FAL29558_fd9e83e6/fastq_pass.fq.gz
+
+tar -Oxf $DIR/kd/nanopore/20190826_1854_GA30000_FAL18435_98887108/fastq_pass.tar \
+    --exclude=./FAL18435_a661f44b2edcc62a3f030caaf8581f84b2fa6838_373.fastq.gz \
+    > $DIR/kd/nanopore/20190826_1854_GA30000_FAL18435_98887108/fastq_pass.fq.gz
+
+  #+end_src
+
 - Add data to git-annex
-  #+begin_src sh :tangle git.nano.sh :var flowcells=nanopore-runs[,1]
+  #+begin_src sh :tangle git.nano.sh :var flowcells=kd-nanopore-runs[,1]
   for id in "${flowcells[@]}"; do
       pushd $DIR/$id/
 
-      git annex add sequencing_summary_*.txt.gz \
+      git add report.pdf final_summary.txt
+      git annex add *sequencing_summary.txt.gz \
           fast?_{pass,fail}.tar \
           fastq_pass.fq.gz \
-          duplex/{pass,fail}.fq.gz \
-          duplex/sequencing_summary.txt.gz
-          report*.md
-
+          report.md duty_time.csv.gz throughput.csv.gz
+      popd
   done
   #+end_src
 
