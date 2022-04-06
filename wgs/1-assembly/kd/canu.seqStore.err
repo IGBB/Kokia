@@ -1,0 +1,29 @@
+
+Found perl:
+   /bin/perl
+   This is perl 5, version 16, subversion 3 (v5.16.3) built for x86_64-linux-thread-multi
+
+Found java:
+   /bin/java
+   openjdk version "1.8.0_252"
+
+Found canu:
+   /apps/canu-2.1/build/bin/canu
+   canu 2.1
+
+
+Creating library 'clean' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       6969590 100.0%  57170292580 100.0%  /work/maa146/peterson.kokia/wgs/1-assembly/kd/clean.fq.gz
+
+
+All reads processed.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       6969590 100.0%  57170292580 100.0%
+
+
+Bye.

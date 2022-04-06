@@ -1,0 +1,64 @@
+#+TITLE: Assembly
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Kokia drynarioides JFW-HI
+
+- Remove lambda and remove reads shorter than 4kb from nanopore data
+  #+header: :var runs=../0-raw/readme.org:kd-nanopore-runs[,1]
+  #+begin_src sh :tangle kd/1-trim.sh
+RAW=$(realpath $DIR/../0-raw/)
+
+printf "$RAW/%s/fastq_pass.fq.gz\n" "${runs[@]}" |
+    xargs $DIR/apps/devour -t 20 -l 4000 |
+    gzip > kd/clean.fq.gz
+  #+end_src
+
+- Assemble contigs using canu
+  #+begin_src sh :tangle kd/2-canu.sh
+ml canu/2.1
+canu \
+    -p canu -d $DIR/kd \
+    genomeSize=590m \
+    gridOptions="-A191400-327070 --time=48:00:00" \
+    useGrid=true \
+    -nanopore $DIR/kd/clean.fq.gz
+
+
+  #+end_src
+
+|        | canu/2.1 |
+|--------+----------|
+| n      |     2264 |
+| n:500  |     2264 |
+| L50    |       54 |
+| min    |     1197 |
+| N75    |  1201645 |
+| N50    |  2757100 |
+| N25    |  4885516 |
+| E-size |  4190213 |
+| max    |  22.95e6 |
+| sum    |  551.1e6 |
+
+- clean canu directory
+  #+begin_src sh
+pushd $DIR/kd
+rm -fr canu-logs/ \
+    canu-scripts/ \
+    canu.seqStore/ \
+    correction/ \
+    trimming/ \
+    unitigging/ \
+    canu.out
+
+gzip *.fasta canu.contigs.layout.*
+
+git add canu.report canu.seqStore.err
+
+git annex add canu.contigs.fasta.gz \
+    canu.contigs.layout.readToTig.gz \
+    canu.contigs.layout.tigInfo.gz \
+    canu.correctedReads.fasta.gz \
+    canu.trimmedReads.fasta.gz \
+    canu.unassembled.fasta.gz
+
+#+end_src
