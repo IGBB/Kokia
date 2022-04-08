@@ -1,1 +1,6 @@
 *.sh
+
+sup.pass.pre.md5
+sup.pass.post.md5
+sup.fail.pre.md5
+sup.fail.post.md5

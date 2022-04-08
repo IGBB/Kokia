@@ -52,6 +52,109 @@ done
 | FAL18647 | 3139279 | 3066621 | 832101 | 500 | 4585 | 6987 |  9652 |   7577 | 158915 | 16.37e9 |
 | FAL29558 | 2874891 | 2794287 | 696116 | 500 | 4371 | 7130 | 10202 |   7773 |  84269 | 14.35e9 |
 
+*** Super Accurate Basecalling
+
+Two runs (0 and 2) had an issue, copied below, with read splitting. Removed the flag and
+reran just those.
+#+begin_quote
+[guppy/error] pipeline::ThreadedNode::worker_function: Exception thrown in
+dataHandlerNode worker thread: Basecall telemetry received for non-existent run
+segment of run ID
+#+end_quote
+
+
+#+begin_src sh :tangle basecall.kd.sh :var flowcells=kd-nanopore-runs[,1]
+ml singularity
+ROOT=$(git rev-parse --show-toplevel)
+
+guppy () {
+    singularity exec -B$ROOT ~/guppy-gpu.sif guppy_basecaller "$@"
+}
+
+
+id="${flowcells[$SLURM_ARRAY_TASK_ID]}"
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+
+cp $DIR/$id/fast5_pass.tar $DIR/$id/fast5_fail.tar $SCRATCH
+
+mkdir $SCRATCH/fast5/ $SCRATCH/super
+tar -C $SCRATCH/fast5 -xvf $SCRATCH/fast5_pass.tar
+tar -C $SCRATCH/fast5 -xvf $SCRATCH/fast5_fail.tar
+
+if [ -e $DIR/$id/fast5_skip.tar ]; then
+    cp $DIR/$id/fast5_skip.tar $SCRATCH
+    tar -C $SCRATCH/fast5 -xvf $SCRATCH/fast5_skip.tar
+fi
+
+guppy -c dna_r9.4.1_450bps_sup_plant.cfg \
+    --compress_fastq \
+    --device "cuda:all:100%" \
+    --input_path $SCRATCH/fast5 \
+    --save_path $SCRATCH/super
+
+cp -r $SCRATCH/super $DIR/$id/sup
+
+#+end_src
+
+#+RESULTS:
+
+- =tar= files as usual
+  #+begin_src sh :tangle sup.backup.sh :var flowcells=kd-nanopore-runs[,1]
+
+datadir=("sup/super/" "sup/" "sup/super/" "sup/" "sup/")
+
+for i in {0..4}; do
+    id="${flowcells[$i]}"
+    pushd $DIR/$id/
+
+    printf "Compressing summary    "
+    gzip -c ${datadir[$i]}/sequencing_summary.txt > sup.sequencing_summary.txt.gz
+    echo "[ OK ]"
+    for dir in pass fail; do
+        printf "Pre tar md5sum         "
+        find ${datadir[$i]}/$dir -type f -execdir md5sum {} \; > sup.$dir.pre.md5 && echo "[ OK ]" || echo "[FAIL]"
+
+        printf "Tar files              "
+        tar -C ${datadir[$i]}/$dir -cf sup.$dir.tar ./ && echo "[ OK ]" || echo "[FAIL]"
+
+        printf "Post tar md5sum        "
+        tar --to-command=md5sum -vxf sup.$dir.tar |
+            awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+                RS='./' FS="[\n ]" > sup.$dir.post.md5 && echo "[ OK ]" || echo "[FAIL]"
+        printf "Check md5sum           "
+        cmp --quiet sup.$dir.{pre,post}.md5 && echo "[ OK ]" || echo "[FAIL]"
+    done
+
+    printf "Create fastq file      "
+    tar -Oxf sup.pass.tar > sup.pass.fq.gz && echo "[ OK ]" || echo "[FAIL]"
+
+   popd
+done
+  #+end_src
+
+- Summary stats
+  #+begin_src sh :tangle fastq.pass.sup.sh :var flowcells=kd-nanopore-runs[,1]
+ml singularity
+ROOT=$(git rev-parse --show-toplevel)
+
+abyss-fac () {
+ /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif /usr/lib/abyss/abyss-fac "$@"
+}
+
+abyss-fac $(printf "$DIR/%s/sup.pass.fq.gz " "${flowcells[@]}")
+  #+end_src
+| name     |        n |    n:500 |     L50 | min |  N75 |  N50 |   N25 | E-size |    max |     sum |
+|----------+----------+----------+---------+-----+------+------+-------+--------+--------+---------|
+| FAL29342 |  2399080 |  2335266 |  524164 | 500 | 4023 | 7523 | 11740 |   8459 |  62543 | 12.16e9 |
+| FAL22953 |  1588078 |  1496354 |  334293 | 500 | 4183 | 7628 | 11510 |   8414 | 239982 | 7.665e9 |
+| FAL18435 |  2101459 |  2044849 |  484096 | 500 | 4337 | 7837 | 11525 |   8505 | 122836 | 11.17e9 |
+| FAL18647 |  2853813 |  2747298 |  728732 | 500 | 4097 | 6425 |  8973 |   6919 |  70679 | 13.24e9 |
+| FAL29558 |  2622225 |  2509225 |  617130 | 500 | 3922 | 6512 |  9422 |   7105 |  63513 |  11.7e9 |
+|----------+----------+----------+---------+-----+------+------+-------+--------+--------+---------|
+| Total    | 11564655 | 11132992 | 2688415 |     | 4112 | 7185 | 10634 |   7880 | 239982 | 55.94e9 |
+#+TBLFM: @>$2..@>$4=vsum(@I$0..@II$0)::@>$6..@>$9=vmean(@I$0..@II$0);%d
+#+TBLFM: @>$10=vmax(@I$0..@II$0)::@>$11=vsum(@I$0..@II$0);e4
 *** cleanup/backup
 
 - Since lustre doesn't like lots of small files, =tar= the fast5 and fastq
