@@ -1,0 +1,63 @@
+
+Found perl:
+   /bin/perl
+   This is perl 5, version 16, subversion 3 (v5.16.3) built for x86_64-linux-thread-multi
+
+Found java:
+   /bin/java
+   openjdk version "1.8.0_262"
+
+Found canu:
+   /project/90daydata/gbru_tmp-amanda/Kokia/wgs/1-assembly/apps/canu-2.2/bin/canu
+   canu 2.2
+
+
+Creating library 'sup.pass' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       2234403  93.1%  12079810649  99.2%  /project/90daydata/gbru_tmp-amanda/Kokia/wgs/0-raw/kd/nanopore/20190826_1854_GA10000_FAL29342_89e34370/sup.pass.fq.gz
+Short         164677   6.9%     97846943   0.8%
+
+
+Creating library 'sup.pass' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       1398447  88.1%   7590773167  98.7%  /project/90daydata/gbru_tmp-amanda/Kokia/wgs/0-raw/kd/nanopore/20190826_1854_GA20000_FAL22953_79be28df/sup.pass.fq.gz
+Short         189631  11.9%    101087277   1.3%
+
+
+Creating library 'sup.pass' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       1965742  93.5%  11106766852  99.3%  /project/90daydata/gbru_tmp-amanda/Kokia/wgs/0-raw/kd/nanopore/20190826_1854_GA30000_FAL18435_98887108/sup.pass.fq.gz
+Short         135717   6.5%     78097621   0.7%
+
+
+Creating library 'sup.pass' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       2618834  91.8%  13144745266  99.0%  /project/90daydata/gbru_tmp-amanda/Kokia/wgs/0-raw/kd/nanopore/20190826_1854_GA40000_FAL18647_98f13006/sup.pass.fq.gz
+Short         234979   8.2%    128810943   1.0%
+
+
+Creating library 'sup.pass' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       2348163  89.5%  11578279597  98.7%  /project/90daydata/gbru_tmp-amanda/Kokia/wgs/0-raw/kd/nanopore/20190826_1854_GA50000_FAL29558_fd9e83e6/sup.pass.fq.gz
+Short         274062  10.5%    156205520   1.3%
+
+
+All reads processed.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded      10565589  91.4%  55500375531  99.0%
+Short         999066   8.6%    562048304   1.0%
+
+
+Bye.

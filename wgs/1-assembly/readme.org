@@ -62,3 +62,37 @@ git annex add canu.contigs.fasta.gz \
     canu.unassembled.fasta.gz
 
 #+end_src
+** sup model
+
+Using the 'Nanopore flip-flop R9.4 or R10.3' settings because of the reduced
+error rate for the latest basecalling data.
+
+#+begin_src sh :tangle kd.sup/run.sh
+RAW=$(realpath $DIR/../0-raw/)
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu \
+    -p canu -d $DIR/kd.sup \
+    genomeSize=590m \
+    gridOptions="-Acotton_genomics" \
+    useGrid=true \
+    corMhapOptions='--threshold 0.8 --ordered-sketch-size 1000 --ordered-kmer-size 14' \
+    correctedErrorRate=0.105 \
+    -nanopore $RAW/*/sup.pass.fq.gz
+
+
+#+end_src
+
+| n      |               2365 |
+| n:500  |               2365 |
+| L50    |                 89 |
+| min    |               1206 |
+| N75    |             755687 |
+| N50    |            1659488 |
+| N25    |            3113363 |
+| E-size |            2550534 |
+| max    |            11.36e6 |
+| sum    |            552.8e6 |
+| name   | canu.contigs.fasta |
+
+- Clean canu directory (see previous)
