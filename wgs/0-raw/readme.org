@@ -1,9 +1,114 @@
 #+TITLE: Whole Genome Sequencing Samples
 #+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
+* Kokia kauaiensis S9
+
+** Nanopore
+
+#+NAME: kk-nanopore-runs
+| ID       | Directory                             |
+|----------+---------------------------------------|
+| FAT17276 | Kk/20220401_1133_X3_FAT17276_1c6df87c |
+| FAT09348 | Kk/20220401_1507_X4_FAT09348_18327be0 |
+
+
+- =tar= data :: =tar='ing =fastq= and =fast5= files to simplify transfer. Both
+  pass and fail =fast5= files are added together. The file name labels the data
+  as pass/fail. Running =md5sum= pre- and post- =tar= to validate.
+  #+begin_src sh :tangle backup.nano.sh :var flowcells=kk-nanopore-runs[,1]
+
+check () {
+    error=$1
+    if [ $error -eq 0 ]; then
+        echo "[ OK ]"
+    else
+        echo "[FAIL]"
+    fi
+}
+
+
+
+for id in "${flowcells[@]}"; do
+    pushd $DIR/$id/
+
+    printf "compressing summary ............ "
+    gzip sequencing_summary_*.txt
+    check $?
+
+    for dir in fastq_{fail,pass} fast5_pass; do
+        printf "pre-tar md5sum [$dir] .... "
+        find $dir -type f -execdir md5sum {} \; > $dir.pre.md5
+        check $?
+
+        printf "tar files [$dir] ......... "
+        tar -C $dir -cf $dir.tar ./
+        check $?
+
+        printf "post-tar md5sum [$dir] ... "
+        tar --to-command=md5sum -vxf $dir.tar |
+            awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+                RS='./' FS="[\n ]" > $dir.post.md5
+        check $?
+
+        printf "compare md5sum [$dir] .... "
+        cmp --quiet $dir.{pre,post}.md5
+        check $?
+    done
+
+    dir=fast5_fail
+    mv fast5_pass.tar fast5_all.tar
+
+    printf "pre-tar md5sum [$dir] .... "
+    find $dir -type f -execdir md5sum {} \; |
+        cat fast5_pass.pre.md5 - > fast5_all.pre.md5
+    check $?
+
+    printf "tar files [$dir] ......... "
+    tar -C $dir -rf fast5_all.tar ./
+    check $?
+
+    printf "post-tar md5sum [$dir] ... "
+    tar --to-command=md5sum -vxf $dir.tar |
+        awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+            RS='./' FS="[\n ]" > fast5_all.post.md5
+    check $?
+
+    printf "compare md5sum [$dir] .... "
+    cmp --quiet fast5_all.{pre,post}.md5
+    check $?
+
+
+
+    popd
+done
+
+  #+end_src
+- Combine fastq data
+  #+begin_src sh :tangle kk-fastq.sh :var flowcells=kk-nanopore-runs[,1]
+for dir in "${flowcells[@]}"; do
+    tar -Oxf $DIR/$dir/fastq_pass.tar > $DIR/$dir/fastq_pass.fq.gz
+done
+  #+end_src
+
+  #+RESULTS:
+
 * Kokia cookei C69
 
-* Kokia kauaiensis S9
+#+NAME: kc-nanopore-runs
+| ID       | Directory                             |
+|----------+---------------------------------------|
+| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd |
+| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096 |
+
+- =tar= data :: see Kk
+- Combine fastq data
+   #+begin_src sh :tangle kc-fastq.sh :var flowcells=kc-nanopore-runs[,1]
+for dir in "${flowcells[@]}"; do
+    tar -Oxf $DIR/$dir/fastq_pass.tar > $DIR/$dir/fastq_pass.fq.gz
+done
+  #+end_src
+
+ 
 
 * Kokia drynarioides JFW-HI
 Biosample: SAMN07559306

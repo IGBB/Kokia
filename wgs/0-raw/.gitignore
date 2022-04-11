@@ -1,6 +1,17 @@
 *.sh
 
+fast5_all.post.md5
+fast5_all.pre.md5
+fastq_pass.pre.md5
+fastq_pass.post.md5
+fastq_fail.post.md5
+fastq_fail.pre.md5
+fast5_pass.pre.md5
+fast5_pass.post.md5
+
+
 sup.pass.pre.md5
 sup.pass.post.md5
 sup.fail.pre.md5
 sup.fail.post.md5
+
