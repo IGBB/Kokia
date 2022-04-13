@@ -96,3 +96,60 @@ canu \
 | name   | canu.contigs.fasta |
 
 - Clean canu directory (see previous)
+
+* Kokia kauaiensis S9
+
+- 1st run
+  #+begin_src sh :tangle kk/run.sh
+RAW=$(realpath $DIR/../0-raw/)
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu \
+    -p canu -d $DIR/kk \
+    genomeSize=590m \
+    gridOptions="-Acotton_genomics" \
+    useGrid=true \
+    -nanopore $RAW/Kk/*/fastq_pass.fq.gz
+
+
+#+end_src
+| n      |                 16092 |
+| n:500  |                 16092 |
+| L50    |                  2530 |
+| min    |                  1114 |
+| N75    |                 27190 |
+| N50    |                 56809 |
+| N25    |                108701 |
+| E-size |                 84051 |
+| max    |                641467 |
+| sum    |               536.3e6 |
+| name   | kk/canu.contigs.fasta |
+
+
+* Kokia cookei C69
+
+- 1st run
+  #+begin_src sh :tangle kc/run.sh
+RAW=$(realpath $DIR/../0-raw/)
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu \
+    -p canu -d $DIR/kc \
+    genomeSize=590m \
+    gridOptions="-Acotton_genomics" \
+    useGrid=true \
+    -nanopore $RAW/Kc/*/fastq_pass.fq.gz
+
+
+#+end_src
+| n      |                  4992 |
+| n:500  |                  4992 |
+| L50    |                   414 |
+| min    |                  1027 |
+| N75    |                147619 |
+| N50    |                342606 |
+| N25    |                702028 |
+| E-size |                561401 |
+| max    |               4034082 |
+| sum    |               555.8e6 |
+| name   | kc/canu.contigs.fasta |
