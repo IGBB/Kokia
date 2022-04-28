@@ -3,6 +3,7 @@
 
 * Kokia drynarioides JFW-HI
 
+** Contigs
 - Remove lambda and remove reads shorter than 4kb from nanopore data
   #+header: :var runs=../0-raw/readme.org:kd-nanopore-runs[,1]
   #+begin_src sh :tangle kd/1-trim.sh
@@ -62,6 +63,176 @@ git annex add canu.contigs.fasta.gz \
     canu.unassembled.fasta.gz
 
 #+end_src
+
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.25
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta \
+    > $DIR/kd/canu.kirkii.paf
+
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/canu.kirkii.paf \
+    -o $DIR/kd/canu.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+
+
+** Hi-C Scaffolding
+- Create bwa database for assembly
+  #+begin_src sh :tangle kd/2-hic/0-ref/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+
+bwa index -a bwtsw -p $DIR/kd/2-hic/0-ref/kd.bwa $DIR/kd/canu.contigs.fasta
+samtools faidx $DIR/kd/canu.contigs.fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=../0-raw/readme.org:kd-hic
+  #+begin_src sh :tangle kd/2-hic/1-bwa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/../0-raw/)
+
+ml singularity/3.7.3
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$DIR/apps/samblaster
+
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -5SP -t 24 $DIR/kd/2-hic/0-ref/kd.bwa $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kd/2-hic/1-bwa/$name.bam
+done
+
+  #+end_src
+
+- Validate libraries
+  #+header: :var data=../0-raw/readme.org:kd-hic
+  #+begin_src sh :tangle 2-hic/2-qc/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml python/3.9.2
+export PYTHONPATH=$PYTHONPATH:~/.local/lib/python3.9/site-packages/
+source $DIR/apps/hic_qc/bin/activate
+
+for name in "${!data[@]}"; do
+    $DIR/apps/hic_qc/hic_qc.py \
+        -b $DIR/2-hic/1-bwa/$name.bam \
+        -o $DIR/2-hic/2-qc/$name \
+        --lib_enzyme GATC
+done
+
+  #+end_src
+
+- Convert bams to single bed
+  #+header: :var data=../0-raw/readme.org:kd-hic[,0]
+  #+begin_src sh :tangle kd/2-hic/3-convert.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+bedtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bedtools/bedtools-2.28.0.sif bedtools $@
+}
+
+export ROOT DIR
+export -f bedtools
+
+parallel --eta bedtools bamtobed -i $DIR/kd/2-hic/1-bwa/{}.bam \
+    ::: "${data[@]}" > $DIR/kd/2-hic/3-alignments.bed
+  #+end_src
+- Run SALSA
+  #+begin_src sh :tangle kd/2-hic/4-salsa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+    run_pipeline.py \
+    -i 15 \
+    -a $DIR/kd/canu.contigs.fasta \
+    -l $DIR/kd/canu.contigs.fasta.fai \
+    -b $DIR/kd/2-hic/3-alignments.bed \
+    -e GATC \
+    -s 590000000 \
+    -o $DIR/kd/2-hic/4-salsa/ \
+    -p yes
+  #+end_src
+
+  #+begin_src sh :tangle kd/2-hic/4-salsa/stat.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_*.fasta \
+    $DIR/kd/2-hic/4-salsa/scaffolds_FINAL.fasta 
+    
+
+  #+end_src
+
+  #+RESULTS:
+  |    n | n:500 | L50 |  min |     N75 |     N50 |     N25 |  E-size |        max |         sum |  name |
+  | 1832 |  1832 |  48 | 1197 | 1337726 | 3293652 | 5573229 | 4604924 | 22950000.0 | 551100000.0 |     1 |
+  | 1663 |  1663 |  46 | 1197 | 1455819 | 3362451 | 6249823 | 4727382 | 22950000.0 | 551100000.0 |     2 |
+  | 1596 |  1596 |  45 | 1197 | 1680764 | 3702737 | 6262271 | 4841897 | 22950000.0 | 551100000.0 |     3 |
+  | 1571 |  1571 |  43 | 1197 | 1722624 | 3786187 | 6299587 | 4959276 | 22950000.0 | 551100000.0 |     4 |
+  | 1596 |  1596 |  45 | 1197 | 1680764 | 3702737 | 6262271 | 4841897 | 22950000.0 | 551100000.0 | FINAL |
+
+
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.25
+
+cd $DIR/kd/
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_4.fasta \
+    > $DIR/kd/hic.kirkii.paf
+
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/hic.kirkii.paf \
+    -o hic.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+** Arrange/Orient
+- Orient and arrange using /Gossipiodes kirkii/
+  #+begin_src sh :tangle kd/3-ragtag/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+ragtag () {
+    singularity exec --no-home -B$ROOT \
+        $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+        ragtag.py "$@"
+
+}
+
+ragtag scaffold -u -t 48 -q 60 -o $DIR/kd/3-ragtag/ -i 0.75  \
+    $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta
+  #+end_src
+
+
 ** sup model
 
 Using the 'Nanopore flip-flop R9.4 or R10.3' settings because of the reduced
@@ -96,7 +267,6 @@ canu \
 | name   | canu.contigs.fasta |
 
 - Clean canu directory (see previous)
-
 * Kokia kauaiensis S9
 
 - 1st run

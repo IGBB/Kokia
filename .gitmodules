@@ -1,0 +1,3 @@
+[submodule "wgs/1-assembly/apps/dotplots"]
+	path = wgs/1-assembly/apps/dotplots
+	url = https://gitlab.com/IGBB/pipelines/dotplots.git
