@@ -108,7 +108,45 @@ for dir in "${flowcells[@]}"; do
 done
   #+end_src
 
- 
+
+** Quality
+
+Plot quality heatmap using sequencing_summary. Limited the x and y axis to 3 IQR
+range.
+
+#+header: :results output graphics file :width 800 :height 600
+#+begin_src R  :file nanopore.qual.png
+library(tidyverse)
+library(data.table)
+
+outlier_value <- function(x) {
+quantile(x, probs=0.75) + 3* IQR(x)
+}
+
+files <- list.files('Kc', pattern="sequencing_summary_.*.txt", recursive = T, full.names = T)
+names(files) <- sub('Kc/(.*)/.*', '\\1', files)
+
+data <- lapply(files, fread) %>%
+  bind_rows(.id='library') %>%
+  select(library, sequence_length_template, mean_qscore_template) %>%
+  mutate(length_outlier = sequence_length_template > outlier_value(sequence_length_template),
+         score_outlier = mean_qscore_template > outlier_value(mean_qscore_template)) %>%
+  mutate(x = ifelse(length_outlier, outlier_value(sequence_length_template), sequence_length_template),
+         y = ifelse(score_outlier, outlier_value(mean_qscore_template), mean_qscore_template),
+         outlier = length_outlier | score_outlier)
+
+
+ggplot(data, aes(x, y, shape=outlier)) +
+  geom_bin2d(binwidth=c(100, 0.5)) +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  facet_grid(rows='library') +
+  theme_minimal()
+#+end_src
+
+#+RESULTS:
+[[file:nanopore.qual.png]]
+
 
 * Kokia drynarioides JFW-HI
 Biosample: SAMN07559306
