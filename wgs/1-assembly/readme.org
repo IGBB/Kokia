@@ -267,6 +267,8 @@ canu \
 | name   | canu.contigs.fasta |
 
 - Clean canu directory (see previous)
+
+
 * Kokia kauaiensis S9
 
 - 1st run
@@ -323,3 +325,76 @@ canu \
 | max    |               4034082 |
 | sum    |               555.8e6 |
 | name   | kc/canu.contigs.fasta |
+
+- hifiasm test
+  #+begin_src sh
+RAW=$(realpath $DIR/../0-raw/)
+PATH=$DIR/apps/hifiasm.src/:$PATH
+
+hifiasm -t 48 -o $DIR/kc/hifiasm.test $DIR/kc/canu.trimmedReads.fasta.gz
+hifiasm -t 48 -l0 -o $DIR/kc/hifiasm.test.l0 $DIR/kc/canu.trimmedReads.fasta.gz
+
+awk '/^S/{print ">"$2;print $3}' kc/hifiasm.test.bp.p_ctg.gfa \
+    > kc/hifiasm.test.bp.p_ctg.fa
+awk '/^S/{print ">"$2;print $3}' kc/hifiasm.test.l0.bp.p_ctg.gfa \
+    > kc/hifiasm.test.l0.bp.p_ctg.fa
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac kc/hifiasm.test{,.l0}.bp.p_ctg.fa
+
+  #+end_src
+
+| n      |         3184 |            4597 |
+| n:500  |         3184 |            4597 |
+| L50    |          333 |             429 |
+| min    |         1332 |            1332 |
+| N75    |       170099 |          123370 |
+| N50    |       403680 |          309824 |
+| N25    |       714084 |          575584 |
+| E-size |       542454 |          417095 |
+| max    |      2722741 |         2075424 |
+| sum    |      471.4e6 |         487.2e6 |
+| name   | hifiasm.test | hifiasm.test.l0 |
+
+- miniasm
+
+  #+begin_src sh
+RAW=$(realpath $DIR/../0-raw/)
+
+cat $RAW/Kc/*/fastq_pass.fq.gz > kc/reads.fq.gz
+$DIR/apps/minimap2 -I30G -x ava-ont -t48 kc/reads.fq.gz kc/reads.fq.gz | gzip -1 > kc/reads.paf.gz
+$DIR/apps/miniasm -f kc/reads.fq.gz kc/reads.paf.gz > kc/miniasm.gfa
+  #+end_src
+
+- shasta
+  #+begin_src sh
+RAW=$(realpath $DIR/../0-raw/)
+
+zcat $RAW/Kc/*/fastq_pass.fq.gz > kc/reads.fq
+
+$DIR/apps/shasta-0.9.0 \
+    --input $DIR/kc/reads.fq \
+    --threads 48 \
+    --config Nanopore-Oct2021 \
+    --assemblyDirectory $DIR/kc/shasta/
+
+ $DIR/apps/shasta-0.9.0 \
+    --input $DIR/kc/reads.fq \
+    --threads 48 \
+    --config Nanopore-Oct2021 \
+    --Reads.minReadLength 5000 \
+    --assemblyDirectory $DIR/kc/shasta.5k/
+
+  #+end_src
+| n                    |   10522 |    3212 |
+| n:500                |   10453 |    3144 |
+| L50                  |    2085 |     397 |
+| min                  |     503 |     552 |
+| N75                  |   39058 |  211770 |
+| N50                  |   70150 |  397785 |
+| N25                  |  116194 |  638523 |
+| E-size               |   84740 |  471734 |
+| max                  |  415102 | 2141538 |
+| sum                  | 475.5e6 | 501.2e6 |
+| min read length name |     10k |      5k |
