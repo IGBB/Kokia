@@ -1,0 +1,17 @@
+instrument=GXB01275
+position=X1
+flow_cell_id=FAU08661
+sample_id=Kc
+protocol_group_id=kokia
+protocol=sequencing/sequencing_MIN112_DNA_SQK-Q20EA:FLO-MIN112:SQK-LSK112
+protocol_run_id=325fe942-7810-47ec-815b-accb048c1ff4
+acquisition_run_id=d8294921947fa9e9a8afb74474e7dda80aafc71d
+started=2022-06-10T14:19:23.732938-05:00
+acquisition_stopped=2022-06-13T14:18:11.667089-05:00
+processing_stopped=2022-06-13T14:19:09.652905-05:00
+basecalling_enabled=1
+sequencing_summary_file=sequencing_summary_FAU08661_d8294921.txt
+fast5_files_in_final_dest=474
+fast5_files_in_fallback=0
+fastq_files_in_final_dest=484
+fastq_files_in_fallback=0

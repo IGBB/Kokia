@@ -1,6 +1,34 @@
 #+TITLE: Whole Genome Sequencing Samples
 #+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
+#+name: basecaller
+#+begin_src sh
+ml singularity
+ROOT=$(git rev-parse --show-toplevel)
+
+guppy () {
+    singularity exec -B$ROOT ~/guppy-gpu.sif guppy_basecaller "$@"
+}
+
+
+id="${flowcells[$SLURM_ARRAY_TASK_ID]}"
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+
+cp $DIR/$id/fast5_all.tar $SCRATCH
+
+mkdir $SCRATCH/fast5/ $SCRATCH/super
+tar -C $SCRATCH/fast5 -xvf $SCRATCH/fast5_all.tar
+
+guppy -c dna_r10.4_e8.1_sup.cfg \
+    --compress_fastq \
+    --device "cuda:all:100%" \
+    --input_path $SCRATCH/fast5 \
+    --save_path $SCRATCH/super
+
+cp -r $SCRATCH/super $DIR/$id/
+#+end_src
+
 * Kokia kauaiensis S9
 
 ** Nanopore
@@ -10,6 +38,21 @@
 |----------+---------------------------------------|
 | FAT17276 | Kk/20220401_1133_X3_FAT17276_1c6df87c |
 | FAT09348 | Kk/20220401_1507_X4_FAT09348_18327be0 |
+| FAU07188 | Kk/20220610_1415_X4_FAU07188_e2f8daf7 |
+| FAU08590 | Kk/20220610_1415_X5_FAU08590_f1023326 |
+
+
+First two runs were super basecalled on the GridION. This took 9 days while
+using the A100s takes 8hrs. So, the second set of runs (20220610) were super
+basecalled on the A110s, making the names slightly different, hence the new
+table.
+#+NAME: kk-nanopore-sup
+| ID       | Directory                                            |
+|----------+------------------------------------------------------|
+| FAT17276 | Kk/20220401_1133_X3_FAT17276_1c6df87c/fastq_pass.tar |
+| FAT09348 | Kk/20220401_1507_X4_FAT09348_18327be0/fastq_pass.tar |
+| FAU07188 | Kk/20220610_1415_X4_FAU07188_e2f8daf7/super.pass.tar |
+| FAU08590 | Kk/20220610_1415_X5_FAU08590_f1023326/super.pass.tar |
 
 
 - =tar= data :: =tar='ing =fastq= and =fast5= files to simplify transfer. Both
@@ -83,26 +126,97 @@ for id in "${flowcells[@]}"; do
 done
 
   #+end_src
-- Combine fastq data
-  #+begin_src sh :tangle kk-fastq.sh :var flowcells=kk-nanopore-runs[,1]
-for dir in "${flowcells[@]}"; do
-    tar -Oxf $DIR/$dir/fastq_pass.tar > $DIR/$dir/fastq_pass.fq.gz
-done
+
+- Super Basecalling
+
+  #+header: :var flowcells=kk-nanopore-runs[,1]
+  #+begin_src sh :tangle basecall.kk.sh :noweb yes
+<<basecaller>>
   #+end_src
 
-  #+RESULTS:
+  - =tar= sup basecalled reads
+
+    #+name: backup-sup
+    #+header: :var flowcells=kk-nanopore-runs[4:5,1]
+    #+begin_src sh :tangle backup-sup.kk.sh
+
+check () {
+    error=$1
+    if [ $error -eq 0 ]; then
+        echo "[ OK ]"
+    else
+        echo "[FAIL]"
+    fi
+}
+
+for id in "${flowcells[@]}"; do
+    pushd $DIR/$id/
+
+    printf "compressing summary ............ "
+    gzip -c super/sequencing_summary.txt > super.sequencing_summary.txt.gz
+    check $?
+
+    for dir in pass fail; do
+        printf "pre-tar md5sum [$dir] .... "
+        find super/$dir -type f -execdir md5sum {} \; > super.$dir.pre.md5
+        check $?
+
+        printf "tar files [$dir] ......... "
+        tar -C super/$dir -vcf super.$dir.tar ./
+        check $?
+
+        printf "post-tar md5sum [$dir] ... "
+        tar --to-command=md5sum -vxf super.$dir.tar |
+            awk 'NR > 2{printf "%s  ./%s\n", $2, $1}' \
+                RS='./' FS="[\n ]" > super.$dir.post.md5
+        check $?
+
+        printf "compare md5sum [$dir] .... "
+        cmp --quiet super.$dir.{pre,post}.md5
+        check $?
+    done
+    popd
+done
+
+  #+end_src
 
 * Kokia cookei C69
 
 #+NAME: kc-nanopore-runs
-| ID       | Directory                             |
-|----------+---------------------------------------|
-| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd |
-| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096 |
+| ID       | Directory                              |
+|----------+----------------------------------------|
+| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd/ |
+| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096/ |
+| FAU08661 | Kc/20220610_1415_X1_FAU08661_325fe942/ |
+| FAU08677 | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/ |
+
+Kc runs follow the same patter as Kk above.
+#+NAME: kc-nanopore-sup
+| ID       | Directory                                            |
+|----------+------------------------------------------------------|
+| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd/fastq_pass.tar |
+| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096/fastq_pass.tar |
+| FAU08661 | Kc/20220610_1415_X1_FAU08661_325fe942/super.pass.tar |
+| FAU08677 | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/super.pass.tar |
 
 - =tar= data :: see Kk
+- Super Basecalling
+
+  #+header: :var flowcells=kc-nanopore-runs[,1]
+  #+begin_src sh :tangle basecall.kc.sh :noweb yes
+<<basecaller>>
+  #+end_src
+  - =tar= sup basecalled reads
+
+    #+header: :var flowcells=kc-nanopore-runs[4:5,1]
+    #+begin_src sh :tangle backup-sup.kc.sh :noweb yes
+<<backup-sup>>
+    #+end_src
+
+
 - Combine fastq data
-   #+begin_src sh :tangle kc-fastq.sh :var flowcells=kc-nanopore-runs[,1]
+
+  #+begin_src sh :tangle kc-fastq.sh :var flowcells=kc-nanopore-runs[,1]
 for dir in "${flowcells[@]}"; do
     tar -Oxf $DIR/$dir/fastq_pass.tar > $DIR/$dir/fastq_pass.fq.gz
 done
