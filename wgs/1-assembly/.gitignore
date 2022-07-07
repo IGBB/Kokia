@@ -2,3 +2,6 @@
 canu.seqStore.sh
 clean.fq.gz
 trim.sh
+combined.fq
+combine.sh
+run.sh

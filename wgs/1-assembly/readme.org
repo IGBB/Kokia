@@ -1,6 +1,12 @@
 #+TITLE: Assembly
 #+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
+#+name: transpose
+#+header: table=""
+#+begin_src elisp
+(org-table-transpose-table-at-point table)
+#+end_src
+
 * Kokia drynarioides JFW-HI
 
 ** Contigs
@@ -13,7 +19,6 @@ printf "$RAW/%s/fastq_pass.fq.gz\n" "${runs[@]}" |
     xargs $DIR/apps/devour -t 20 -l 4000 |
     gzip > kd/clean.fq.gz
   #+end_src
-
 - Assemble contigs using canu
   #+begin_src sh :tangle kd/2-canu.sh
 ml canu/2.1
@@ -27,19 +32,18 @@ canu \
 
   #+end_src
 
-|        | canu/2.1 |
-|--------+----------|
-| n      |     2264 |
-| n:500  |     2264 |
-| L50    |       54 |
-| min    |     1197 |
-| N75    |  1201645 |
-| N50    |  2757100 |
-| N25    |  4885516 |
-| E-size |  4190213 |
-| max    |  22.95e6 |
-| sum    |  551.1e6 |
-
+  |        | canu/2.1 |
+  |--------+----------|
+  | n      |     2264 |
+  | n:500  |     2264 |
+  | L50    |       54 |
+  | min    |     1197 |
+  | N75    |  1201645 |
+  | N50    |  2757100 |
+  | N25    |  4885516 |
+  | E-size |  4190213 |
+  | max    |  22.95e6 |
+  | sum    |  551.1e6 |
 - clean canu directory
   #+begin_src sh
 pushd $DIR/kd
@@ -63,20 +67,19 @@ git annex add canu.contigs.fasta.gz \
     canu.unassembled.fasta.gz
 
 #+end_src
-
 - dotplot against kirkii
 
   #+begin_src sh
-ml minimap2/2.17 r/4.0.25
+ml minimap2/2.17 r/4.0.2
 
 minimap2 -x asm5 -t 20 \
     $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta \
     > $DIR/kd/canu.kirkii.paf
 
-Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/canu.kirkii.paf \
-    -o $DIR/kd/canu.kirkii -m 20000 -x -s -t -l -p 12
+cd $DIR/kd
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i canu.kirkii.paf \
+    -o canu.kirkii -m 20000 -x -s -t -l -p 12
   #+end_src
-
 
 ** Hi-C Scaffolding
 - Create bwa database for assembly
@@ -232,6 +235,10 @@ ragtag scaffold -u -t 48 -q 60 -o $DIR/kd/3-ragtag/ -i 0.75  \
     $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta
   #+end_src
 
+#+CALL: apps/dotplots.org:dotplot()
+
+#+RESULTS:
+: /project/90daydata/gbru_kokia/Kokia/wgs/1-assembly/
 
 ** sup model
 
@@ -271,130 +278,427 @@ canu \
 
 * Kokia kauaiensis S9
 
-- 1st run
-  #+begin_src sh :tangle kk/run.sh
-RAW=$(realpath $DIR/../0-raw/)
-PATH=$DIR/apps/canu-2.2/bin:$PATH
+** 1-contigs
+#+header: :var runs=../0-raw/readme.org:kk-nanopore-sup[,1]
+#+begin_src sh :tangle kk/combine.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $ROOT/0-raw/)
 
-canu \
-    -p canu -d $DIR/kk \
-    genomeSize=590m \
-    gridOptions="-Acotton_genomics" \
-    useGrid=true \
-    -nanopore $RAW/Kk/*/fastq_pass.fq.gz
-
-
+for file in "${runs[@]}"; do
+      tar -Oxf $ROOT/wgs/0-raw/$file
+done |
+    zcat -f > $DIR/kk/combined.fq
 #+end_src
-| n      |                 16092 |
-| n:500  |                 16092 |
-| L50    |                  2530 |
-| min    |                  1114 |
-| N75    |                 27190 |
-| N50    |                 56809 |
-| N25    |                108701 |
-| E-size |                 84051 |
-| max    |                641467 |
-| sum    |               536.3e6 |
-| name   | kk/canu.contigs.fasta |
 
+- shasta
 
-* Kokia cookei C69
+  #+begin_src sh :tangle kk/1-contigs/shasta.sh
+ROOT=$(git rev-parse --show-toplevel)
 
-- 1st run
-  #+begin_src sh :tangle kc/run.sh
-RAW=$(realpath $DIR/../0-raw/)
-PATH=$DIR/apps/canu-2.2/bin:$PATH
+$DIR/apps/shasta-0.10.0 \
+    --input $DIR/kk/combined.fq \
+    --threads 48 \
+    --config Nanopore-May2022 \
+    --assemblyDirectory $DIR/kk/1-contigs/shasta/
+  #+end_src
 
-canu \
-    -p canu -d $DIR/kc \
-    genomeSize=590m \
-    gridOptions="-Acotton_genomics" \
-    useGrid=true \
-    -nanopore $RAW/Kc/*/fastq_pass.fq.gz
-
-
-#+end_src
-| n      |                  4992 |
-| n:500  |                  4992 |
-| L50    |                   414 |
-| min    |                  1027 |
-| N75    |                147619 |
-| N50    |                342606 |
-| N25    |                702028 |
-| E-size |                561401 |
-| max    |               4034082 |
-| sum    |               555.8e6 |
-| name   | kc/canu.contigs.fasta |
-
-- hifiasm test
+  #+name: abyss-fac
+  #+header: :var genome="kk/1-contigs/shasta/Assembly.fasta"
   #+begin_src sh
-RAW=$(realpath $DIR/../0-raw/)
-PATH=$DIR/apps/hifiasm.src/:$PATH
-
-hifiasm -t 48 -o $DIR/kc/hifiasm.test $DIR/kc/canu.trimmedReads.fasta.gz
-hifiasm -t 48 -l0 -o $DIR/kc/hifiasm.test.l0 $DIR/kc/canu.trimmedReads.fasta.gz
-
-awk '/^S/{print ">"$2;print $3}' kc/hifiasm.test.bp.p_ctg.gfa \
-    > kc/hifiasm.test.bp.p_ctg.fa
-awk '/^S/{print ">"$2;print $3}' kc/hifiasm.test.l0.bp.p_ctg.gfa \
-    > kc/hifiasm.test.l0.bp.p_ctg.fa
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity/3.7.3
 
 singularity exec -B $ROOT \
     /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
-    /usr/lib/abyss/abyss-fac kc/hifiasm.test{,.l0}.bp.p_ctg.fa
+    /usr/lib/abyss/abyss-fac $genome
+  #+end_src
+
+  #+RESULTS: abyss-fac
+  | n      |       13671 |
+  | n:500  |       13501 |
+  | L50    |        2894 |
+  | min    |         507 |
+  | N75    |       17224 |
+  | N50    |       29894 |
+  | N25    |       48305 |
+  | E-size |       36036 |
+  | max    |      238763 |
+  | sum    | 277400000.0 |
+  | name   |   kk/shasta |
+- hifiasm
+#+begin_src sh :tangle kk/1-contigs/hifiasm.sh
+PATH=$DIR/apps/hifiasm-0.16.1/:$PATH
+
+hifiasm -t 48 -o $DIR/kk/1-contigs/hifiasm $DIR/kk/combined.fq
+awk '/^S/{print ">"$2;print $3}' $DIR/kk/1-contigs/hifiasm.bp.p_ctg.gfa \
+    > $DIR/kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+#+end_src
+
+#+call: abyss-fac(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
+
+#+RESULTS:
+| n      |        2625 |
+| n:500  |        2625 |
+| L50    |         297 |
+| min    |        3598 |
+| N75    |      213535 |
+| N50    |      483159 |
+| N25    |      906223 |
+| E-size |      721462 |
+| max    |     4146154 |
+| sum    | 536100000.0 |
+| name   |  kk/hifiasm |
+
+- dotplot against kirkii
+
+  #+call: dotplot-kirkii(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
+
+  #+ATTR_ORG: :width 750
+  [[./kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa.kirkii.png]]
+- wtdbg2
+
+  Assemble with wtdbg2 PacBio CCS reads look to have a similar error rate to the
+  latest nanopore basecalling model, sup. Trying those presets.
+  #+begin_src sh :tangle kk/1-contigs/wtdbg2/run.sh
+PATH=$DIR/apps/wtdbg-2.5_x64_linux/:$PATH
+
+cd $DIR/kk/1-contigs/wtdbg2/
+wtdbg2 -x ccs -g 590m -i $DIR/kk/combined.fq -t 48 -fo dbg
+
+# derive consensus
+wtpoa-cns -t 48 -i dbg.ctg.lay.gz -fo dbg.raw.fa
+
 
   #+end_src
 
-| n      |         3184 |            4597 |
-| n:500  |         3184 |            4597 |
-| L50    |          333 |             429 |
-| min    |         1332 |            1332 |
-| N75    |       170099 |          123370 |
-| N50    |       403680 |          309824 |
-| N25    |       714084 |          575584 |
-| E-size |       542454 |          417095 |
-| max    |      2722741 |         2075424 |
-| sum    |      471.4e6 |         487.2e6 |
-| name   | hifiasm.test | hifiasm.test.l0 |
+  - Assembly Stats
+  #+call: abyss-fac(genome="kk/1-contigs/wtdbg2/dbg.raw.fa")
 
-- miniasm
+  #+RESULTS:
+  | n      |         710 |
+  | n:500  |         710 |
+  | L50    |          50 |
+  | min    |        2261 |
+  | N75    |     1590418 |
+  | N50    |     2861231 |
+  | N25    |     5194771 |
+  | E-size |     3637209 |
+  | max    |  13440000.0 |
+  | sum    | 489400000.0 |
 
-  #+begin_src sh
-RAW=$(realpath $DIR/../0-raw/)
+  - dotplot against kirkii
 
-cat $RAW/Kc/*/fastq_pass.fq.gz > kc/reads.fq.gz
-$DIR/apps/minimap2 -I30G -x ava-ont -t48 kc/reads.fq.gz kc/reads.fq.gz | gzip -1 > kc/reads.paf.gz
-$DIR/apps/miniasm -f kc/reads.fq.gz kc/reads.paf.gz > kc/miniasm.gfa
+   #+call: dotplot-kirkii(genome="kk/1-contigs/wtdbg2/dbg.raw.fa")
+
+   #+ATTR_ORG: :width 750
+    [[./kk/1-contigs/wtdbg2/dbg.raw.fa.kirkii.png]]
+- canu
+
+  #+begin_src sh :tangle kk/1-contigs/canu/run.sh
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu -p canu -d $DIR/kk/1-contigs/canu/ useGrid=true gridOptions=-Agbru_kokia \
+     genomeSize=590m -nanopore $DIR/kk/combined.fq
   #+end_src
 
+  #+call: abyss-fac(genome="kk/1-contigs/canu/canu.contigs.fasta")
+
+  #+RESULTS:
+  | n      |        8047 |
+  | n:500  |        8047 |
+  | L50    |         521 |
+  | min    |        1114 |
+  | N75    |      103348 |
+  | N50    |      280353 |
+  | N25    |      572593 |
+  | E-size |      530926 |
+  | max    |     7688614 |
+  | sum    | 583800000.0 |
+  | name   |    kk/canu/ |
+
+
+#+begin_src sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity/3.7.3
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+        kk/1-contigs/shasta/Assembly.fasta \
+        kk/1-contigs/canu/canu.contigs.fasta \
+        kk/1-contigs/wtdbg2/dbg.raw.fa \
+        kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+#+end_src
+
+#+RESULTS:
+|        |   shasta |     canu |   wtdbg2 |  hifiasm |
+|--------+----------+----------+----------+----------|
+| n      |    13671 |     8047 |      710 |     2625 |
+| n:500  |    13501 |     8047 |      710 |     2625 |
+| L50    |     2894 |      521 |       50 |      297 |
+| min    |      507 |     1114 |     2261 |     3598 |
+| N75    |    17224 |   103348 |  1590418 |   213535 |
+| N50    |    29894 |   280353 |  2861231 |   483159 |
+| N25    |    48305 |   572593 |  5194771 |   906223 |
+| E-size |    36036 |   530926 |  3637209 |   721462 |
+| max    |   238763 |  7688614 | 13440000 |  4146154 |
+| sum    | 277.4 Mb | 583.8 Mb | 489.4 Mb | 536.1 Mb |
+
+#+ATTR_ORG: :width 750
+[[./kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa.kirkii.png]]
+#+ATTR_ORG: :width 750
+[[./kk/1-contigs/wtdbg2/dbg.raw.fa.kirkii.png]]
+
+Using wtdbg2 assembly.
+
+** 2-arrange
+- Orient and arrange using /Gossipiodes kirkii/
+  #+begin_src sh :tangle kk/2-arrange/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+ragtag () {
+    singularity exec --no-home -B$ROOT \
+        $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+        ragtag.py "$@"
+
+}
+
+ragtag scaffold -u -t 48 -q 60 -o $DIR/kk/2-arrange/ -i 0.75  \
+    $DIR/0-ref/kirkii.fa $DIR/kk/1-contigs/wtdbg2/dbg.raw.fa
+  #+end_src
+
+  #+call: abyss-fac(genome="kk/2-arrange/ragtag.scaffold.fasta")
+
+  #+RESULTS:
+  | n      |       298 |
+  | n:500  |       298 |
+  | L50    |         6 |
+  | N75    | 3.570e+07 |
+  | N50    | 3.865e+07 |
+  | N25    | 4.483e+07 |
+  | E-size | 3.960e+07 |
+  | max    | 5.632e+07 |
+  | sum    | 4.894e+08 |
+  #+TBLFM: @4$2..@>$2=$0;%0.3e
+
+  #+call: dotplot-kirkii(genome="kc/2-arrange/ragtag.scaffold.fasta")
+
+  #+ATTR_ORG: :width 750
+  [[./kk/2-arrange/ragtag.scaffold.fasta.kirkii.png]]
+* Kokia cookei C69
+
+#+header: :var runs=../0-raw/readme.org:kc-nanopore-sup[,1]
+#+begin_src sh :tangle kc/combine.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $ROOT/0-raw/)
+
+for file in "${runs[@]}"; do
+      tar -Oxf $ROOT/wgs/0-raw/$file
+done |
+    zcat -f > $DIR/kc/combined.fq
+#+end_src
+
+** 1-contigs
 - shasta
-  #+begin_src sh
-RAW=$(realpath $DIR/../0-raw/)
 
-zcat $RAW/Kc/*/fastq_pass.fq.gz > kc/reads.fq
+  #+begin_src sh :tangle kc/1-contigs/shasta.sh
+ROOT=$(git rev-parse --show-toplevel)
 
-$DIR/apps/shasta-0.9.0 \
-    --input $DIR/kc/reads.fq \
+$DIR/apps/shasta-0.10.0 \
+    --input $DIR/kc/combined.fq \
     --threads 48 \
-    --config Nanopore-Oct2021 \
-    --assemblyDirectory $DIR/kc/shasta/
+    --config Nanopore-May2022 \
+    --assemblyDirectory $DIR/kc/1-contigs/shasta/
+  #+end_src
 
- $DIR/apps/shasta-0.9.0 \
-    --input $DIR/kc/reads.fq \
-    --threads 48 \
-    --config Nanopore-Oct2021 \
-    --Reads.minReadLength 5000 \
-    --assemblyDirectory $DIR/kc/shasta.5k/
+  #+call: abyss-fac(genome="kc/1-contigs/shasta/Assembly.fasta")
+
+  #+RESULTS:
+  | n      |        5477 |
+  | n:500  |        5416 |
+  | L50    |         859 |
+  | min    |         503 |
+  | N75    |      101520 |
+  | N50    |      185196 |
+  | N25    |      304546 |
+  | E-size |      225639 |
+  | max    |     1284992 |
+  | sum    | 519500000.0 |
+  | name   |   kc/shasta |
+- hifiasm
+  #+begin_src sh :tangle kc/1-contigs/hifiasm.sh
+PATH=$DIR/apps/hifiasm-0.16.1/:$PATH
+
+hifiasm -t 48 -o $DIR/kc/1-contigs/hifiasm $DIR/kc/combined.fq
+awk '/^S/{print ">"$2;print $3}' $DIR/kc/1-contigs/hifiasm.bp.p_ctg.gfa \
+    > $DIR/kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+  #+end_src
+
+  #+call: abyss-fac(genome="kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
+
+  #+RESULTS:
+  | n      |        1159 |
+  | n:500  |        1159 |
+  | L50    |         132 |
+  | min    |        3607 |
+  | N75    |      636832 |
+  | N50    |     1248703 |
+  | N25    |     2168255 |
+  | E-size |     1546437 |
+  | max    |     5878698 |
+  | sum    | 544600000.0 |
+  | name   |  kc/hifiasm |
+  - dotplot against kirkii
+
+    #+name: dotplot-kirkii
+    #+header: :var genome="kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa"
+    #+header: :var out="kc/1-contigs/hifiasm.kirkii.png"
+    #+begin_src sh
+ml gd/2.3.0
+
+echo $DIR/apps/dotplot/dotplot -t 12 -p grey -o $DIR/$out $DIR/0-ref/kirki.fa $DIR/$genome
+    #+end_src
+
+
+    #+ATTR_ORG: :width 750
+    [[./kc/1-contigs/hifiasm.kirkii.png]]
+- wtdbg2
+
+  Assemble with wtdbg2 PacBio CCS reads look to have a similar error rate to the
+  latest nanopore basecalling model, sup. Trying those presets.
+
+  #+begin_src sh :tangle kc/1-contigs/wtdbg2/run.sh
+PATH=$DIR/apps/wtdbg-2.5_x64_linux/:$PATH
+
+cd $DIR/kc/1-contigs/wtdbg2/
+wtdbg2 -x ccs -g 590m -i $DIR/kc/combined.fq -t 48 -fo dbg
+
+# derive consensus
+wtpoa-cns -t 48 -i dbg.ctg.lay.gz -fo dbg.raw.fa
+
 
   #+end_src
-| n                    |   10522 |    3212 |
-| n:500                |   10453 |    3144 |
-| L50                  |    2085 |     397 |
-| min                  |     503 |     552 |
-| N75                  |   39058 |  211770 |
-| N50                  |   70150 |  397785 |
-| N25                  |  116194 |  638523 |
-| E-size               |   84740 |  471734 |
-| max                  |  415102 | 2141538 |
-| sum                  | 475.5e6 | 501.2e6 |
-| min read length name |     10k |      5k |
+
+  #+call: abyss-fac(genome="kc/1-contigs/wtdbg2/dbg.raw.fa")
+
+  #+RESULTS:
+  | n      |        1312 |
+  | n:500  |        1312 |
+  | L50    |          44 |
+  | min    |        1335 |
+  | N75    |     1795357 |
+  | N50    |     3228960 |
+  | N25    |     6031992 |
+  | E-size |     4064933 |
+  | max    |  11860000.0 |
+  | sum    | 492700000.0 |
+  | name   |   kc/wtdbg2 |
+
+  - dotplot against kirkii
+
+    #+call: dotplot-kirkii(genome="kc/1-contigs/wtdbg2/dbg.raw.fa")
+
+    #+ATTR_ORG: :width 750
+    [[./kc/1-contigs/wtdbg2/dbg.raw.fa.kirkii.png]]
+- canu
+
+  #+begin_src sh :tangle kc/1-contigs/canu/run.sh
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu -p canu -d $DIR/kc/1-contigs/canu/ useGrid=true gridOptions=-Agbru_kokia \
+     genomeSize=590m -nanopore $DIR/kc/combined.fq
+  #+end_src
+
+  #+call: abyss-fac(genome="kc/1-contigs/canu/canu.contigs.fasta")
+
+  #+RESULTS:
+  | n      |        3775 |
+  | n:500  |        3775 |
+  | L50    |         196 |
+  | min    |        1240 |
+  | N75    |      312249 |
+  | N50    |      739053 |
+  | N25    |     1433996 |
+  | E-size |     1185320 |
+  | max    |     8055587 |
+  | sum    | 561600000.0 |
+  | name   |     kc/canu |
+
+
+#+begin_src sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity/3.7.3
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+        kc/1-contigs/shasta/Assembly.fasta \
+        kc/1-contigs/canu/canu.contigs.fasta \
+        kc/1-contigs/wtdbg2/dbg.raw.fa \
+        kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+#+end_src
+
+|        |  shasta |      canu | wtdbg2    | *hifiasm* |
+|--------+---------+-----------+-----------+---------|
+| n      |    5477 |      3775 | 1312      |  *1159* |
+| L50    |     859 |       196 | *44*      |     132 |
+| min    |     503 |      1240 | 1335      |  *3607* |
+| N75    |  101520 |    312249 | *1795357* |  636832 |
+| N50    |  185196 |    739053 | *3228960* | 1248703 |
+| N25    |  304546 |   1433996 | *6031992* | 2168255 |
+| E-size |  225639 |   1185320 | *4064933* | 1546437 |
+| max    | 1284992 |   8055587 | *11.86e6* | 5878698 |
+| sum    | 519.5e6 | *561.6e6* | 492.7e6   | 544.6e6 |
+
+#+begin_src sh
+montage -geometry +0+0 kc/1-contigs/hifiasm.kirkii.png kc/wtdbg2.kirkii.png kc/1-contigs/dotplots.kirkii.png
+#+end_src
+
+#+RESULTS:
+
+#+ATTR_ORG: :width 1000
+[[./kc/1-contigs/dotplots.kirkii.png]]
+
+Based on the number of contigs, the size of the assembly, and the dotplots, the
+hifiasm looks to be the best out of the four.
+
+** 2-arrange
+- Orient and arrange using /Gossipiodes kirkii/
+  #+begin_src sh
+zcat $DIR/0-ref/kirkii.fa.gz > $DIR/0-ref/kirkii.fa
+  #+end_src
+
+  #+begin_src sh :tangle kc/2-arrange/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+ragtag () {
+    singularity exec --no-home -B$ROOT \
+        $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+        ragtag.py "$@"
+
+}
+
+ragtag scaffold -u -t 48 -q 60 -o $DIR/kc/2-arrange/ -i 0.75  \
+    $DIR/0-ref/kirkii.fa $DIR/kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+  #+end_src
+
+  #+call: abyss-fac(genome="kc/2-arrange/ragtag.scaffold.fasta")
+
+  #+RESULTS:
+  | n      |       481 |
+  | L50    |         6 |
+  | min    |      3607 |
+  | N75    | 3.648e+07 |
+  | N50    | 3.943e+07 |
+  | N25    | 4.926e+07 |
+  | E-size | 4.110e+07 |
+  | max    | 5.863e+07 |
+  | sum    | 5.446e+08 |
+  #+TBLFM: @4$2..@>$2=$0;%0.3e
+
+  #+call: dotplot-kirkii(genome="kc/2-arrange/ragtag.scaffold.fasta")
+
+  #+ATTR_ORG: :width 750
+  [[./kc/2-arrange/ragtag.scaffold.fasta.kirkii.png]]
