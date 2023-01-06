@@ -180,8 +180,17 @@ done
 
   #+end_src
 
-* Kokia cookei C69
+** Hi-C
 
+Hi-C library made by Phase-Genomics plant kit
+
+#+name: kk-hic
+| name   | forward                                              | reverse                                              |
+|--------+------------------------------------------------------+------------------------------------------------------|
+| kk-hic | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_1.fq.gz | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_2.fq.gz |
+
+* Kokia cookei C69
+** Nanopore
 #+NAME: kc-nanopore-runs
 | ID       | Directory                              |
 |----------+----------------------------------------|
@@ -261,6 +270,15 @@ ggplot(data, aes(x, y, shape=outlier)) +
 #+RESULTS:
 [[file:nanopore.qual.png]]
 
+
+** Hi-C
+
+Hi-C library made by Phase-Genomics plant kit
+
+#+name: kc-hic
+| name   | forward                                              | reverse                                              |
+|--------+------------------------------------------------------+------------------------------------------------------|
+| kc-hic | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_1.fq.gz | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_2.fq.gz |
 
 * Kokia drynarioides JFW-HI
 Biosample: SAMN07559306
