@@ -1,4 +1,5 @@
 #+TITLE: GBS samples
+#+PROPERTY:  header-args :var DIR=(file-name-directory (file-local-name buffer-file-name))
 
 * Dried Tissue
 
@@ -90,3 +91,146 @@
 |              1780 | Kokia drynarioides        |
 |              4372 | Kokia cookei              |
 |              4373 | Kokia cookei              |
+
+
+
+* Align
+
+#+NAME: kd-gbs
+| Name       | Forward                                                 | Reverse                                                 |
+|------------+---------------------------------------------------------+---------------------------------------------------------|
+| Kd_3041    | Kd_3041/Kd_3041_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3041/Kd_3041_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
+| Kd_3042    | Kd_3042/Kd_3042_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3042/Kd_3042_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
+| Kd_3043    | Kd_3043/Kd_3043_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3043/Kd_3043_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
+| Kd_JW      | Kd_JW/Kd_JW_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz       | Kd_JW/Kd_JW_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz       |
+| Kd_JW_ng   | Kd_JW_ng/Kd_JW_ng_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz | Kd_JW_ng/Kd_JW_ng_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz |
+| SRR6195040 | SRR6195040/SRR6195040_1.fastq.gz                        | SRR6195040/SRR6195040_2.fastq.gz                        |
+| Kk_19S8    | Kk_19S8/Kk_19S8_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kk_19S8/Kk_19S8_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
+
+- Create bwa database for assembly
+  #+begin_src sh :tangle 1-align/0-ref.kd.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+fasta=$DIR/0-ref/Kd.contigs.fa
+bwa index -a bwtsw $fasta
+samtools faidx $fasta
+  #+end_src
+- Align to contigs
+  #+header: :var data=kd-gbs[8:9,]
+  #+begin_src sh :tangle 1-align/1-bwa.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/0-raw/)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$ROOT/wgs/1-assembly/apps/samblaster-v.0.1.26/
+
+fasta=$DIR/0-ref/Kd.contigs.fa
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -t 48 $fasta $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS |
+        samtools sort -m200G -o $DIR/1-align/$name.bam -
+done
+
+  #+end_src
+
+* Coverage
+- Calculate Base Depth
+  #+header: :var data=kd-gbs[8,0]
+  #+begin_src sh :tangle 2-coverage/1-depth.sh
+ROOT=$(git rev-parse --show-toplevel)
+export DIR ROOT
+
+ml singularity
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+export -f samtools
+
+parallel --eta samtools depth $DIR/1-align/{}.bam \
+    '>' $DIR/2-coverage/{}.depth ::: "${data[@]}"
+
+  #+end_src
+
+* Variant calling
+
+#+header: :var data=kd-gbs[,0]
+#+begin_src sh :tangle 3-variants/1-call.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/0-raw/)
+
+ml singularity
+bcftools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bcftools/bcftools-1.9.sif \
+        bcftools "$@"
+}
+
+fasta=$DIR/0-ref/Kd.contigs.fa
+
+bcftools mpileup -Ou -f $fasta $(printf "$DIR/1-align/%s.bam " "${data[@]}") |
+    bcftools call -vmO z -o 3-variants/all.vcf.gz
+
+#+end_src
+
+#+NAME: plot-pca
+#+HEADER: :results output graphics file  :width 800 :height 600 :noweb yes
+#+begin_src R :file kd-samples.png :var vcf='3-variants/kd.vcf'
+library(tidyverse)
+library(SNPRelate)
+library(SeqArray)
+library(ggrepel)
+
+vcf <- scan(text=vcf, what="character", allowEscapes = T)
+
+# Using SeqArray converter instead of SNPRelate's
+seqVCF2GDS(vcf, 'all.gds')
+genofile <- seqOpen('all.gds')
+# Run PCA using SNPRelate
+#snpgdsVCF2GDS(vcf, 'all.gds', method='biallelic.only')
+#genofile <- snpgdsOpen('all.gds')
+pca <- snpgdsPCA(genofile, autosome.only=F, num.thread=48)
+pc.percent <- pca$varprop*100
+
+## Grab relevent data
+data <- data.frame(Library.ID = pca$sample.id,
+    EV1 = pca$eigenvect[,1],    # the first eigenvector
+    EV2 = pca$eigenvect[,2],    # the second eigenvector
+    stringsAsFactors = FALSE) %>%
+  mutate(label = basename(Library.ID))
+
+# Plot PCA, labeling outliers
+p <- ggplot(data, aes(x=EV1, y=EV2)) +
+  geom_point() +
+  geom_label_repel(aes(label=label)) +
+  scale_shape_manual(values=c(20, 4)) +
+  xlab(sprintf("PC 1 (%0.2f%%)", pc.percent[1])) +
+  ylab(sprintf("PC 2 (%0.2f%%)", pc.percent[2])) +
+  theme_minimal()
+p
+#+end_src
+
+[[file:all-samples.png]]
