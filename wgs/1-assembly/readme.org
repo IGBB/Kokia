@@ -1,5 +1,5 @@
 #+TITLE: Assembly
-#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+#+PROPERTY:  header-args :var DIR=(file-name-directory (file-local-name buffer-file-name))
 
 #+name: transpose
 #+header: table=""
@@ -275,8 +275,35 @@ canu \
 
 - Clean canu directory (see previous)
 
-
 * Kokia kauaiensis S9
+
+#+begin_src shell
+ml singularity
+
+singularity exec -B $DIR \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kk/1-contigs/wtdbg2/dbg.raw.fa \
+    $DIR/kk/2-polish/consensus.fasta \
+    $DIR/kk/3-scaffolds/3-salsa/scaffolds_FINAL.fasta \
+    $DIR/kk/4-gapfill/gapless_run/gapless.fa
+#+end_src
+
+#+RESULTS:
+| name   | 1-contigs | 2-polish | 3-scaffolds | 4-gapfill |
+|--------+-----------+----------+-------------+-----------|
+| n      |       710 |      710 |         364 |      2886 |
+| n:500  |       710 |      710 |         364 |      2885 |
+| L50    |        50 |       50 |          19 |       275 |
+| min    |      2261 |     2270 |        2270 |       557 |
+| N75    |   1590418 |  1590831 |     3762302 |    249188 |
+| N50    |   2861231 |  2861712 |     8295611 |    471121 |
+| N25    |   5194771 |  5195752 |     14.21e6 |    955904 |
+| E-size |   3637209 |  3637948 |     9181974 |    759861 |
+| max    |   13.44e6 |  13.45e6 |     22.95e6 |   4369655 |
+| sum    |   489.4e6 |  489.5e6 |     489.5e6 |   507.8e6 |
+#+tblfm: @I$2..@>$>=$0;e4
+
 
 ** 1-contigs
 #+header: :var runs=../0-raw/readme.org:kk-nanopore-sup[,1]
@@ -304,9 +331,10 @@ $DIR/apps/shasta-0.10.0 \
 
   #+name: abyss-fac
   #+header: :var genome="kk/1-contigs/shasta/Assembly.fasta"
-  #+begin_src sh
+  #+begin_src shell
+cd $DIR
 ROOT=$(git rev-parse --show-toplevel)
-ml singularity/3.7.3
+ml singularity
 
 singularity exec -B $ROOT \
     /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
@@ -326,35 +354,35 @@ singularity exec -B $ROOT \
   | sum    | 277400000.0 |
   | name   |   kk/shasta |
 - hifiasm
-#+begin_src sh :tangle kk/1-contigs/hifiasm.sh
+  #+begin_src sh :tangle kk/1-contigs/hifiasm.sh
 PATH=$DIR/apps/hifiasm-0.16.1/:$PATH
 
 hifiasm -t 48 -o $DIR/kk/1-contigs/hifiasm $DIR/kk/combined.fq
 awk '/^S/{print ">"$2;print $3}' $DIR/kk/1-contigs/hifiasm.bp.p_ctg.gfa \
     > $DIR/kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
-#+end_src
+  #+end_src
 
-#+call: abyss-fac(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
+  #+call: abyss-fac(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
 
-#+RESULTS:
-| n      |        2625 |
-| n:500  |        2625 |
-| L50    |         297 |
-| min    |        3598 |
-| N75    |      213535 |
-| N50    |      483159 |
-| N25    |      906223 |
-| E-size |      721462 |
-| max    |     4146154 |
-| sum    | 536100000.0 |
-| name   |  kk/hifiasm |
+  #+RESULTS:
+  | n      |        2625 |
+  | n:500  |        2625 |
+  | L50    |         297 |
+  | min    |        3598 |
+  | N75    |      213535 |
+  | N50    |      483159 |
+  | N25    |      906223 |
+  | E-size |      721462 |
+  | max    |     4146154 |
+  | sum    | 536100000.0 |
+  | name   |  kk/hifiasm |
 
-- dotplot against kirkii
+  - dotplot against kirkii
 
-  #+call: dotplot-kirkii(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
+    #+call: dotplot-kirkii(genome="kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa")
 
-  #+ATTR_ORG: :width 750
-  [[./kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa.kirkii.png]]
+    #+ATTR_ORG: :width 750
+    [[./kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa.kirkii.png]]
 - wtdbg2
 
   Assemble with wtdbg2 PacBio CCS reads look to have a similar error rate to the
@@ -451,6 +479,205 @@ singularity exec -B $ROOT \
 
 Using wtdbg2 assembly.
 
+** 2-polish
+#+begin_src sh :tangle kk/2-polish/medaka.sh
+ROOT=$(git rev-parse --show-toplevel)
+export DIR ROOT
+
+ml singularity/3.8.3
+
+# clean up singularity medaka command. take the first element as subcommand,
+# then remove it from stack. Pass the remaining stack to medaka cmd.
+medaka () {
+    cmd=medaka_$1
+    shift;
+
+    singularity exec -B $ROOT $DIR/apps/medaka_v1.7.1.sif $cmd $@;
+}
+
+
+medaka consensus -t 48 -m r104_e81_sup_g5015 \
+    -i $DIR/kk/combined.fq \
+    -d $DIR/kk/1-contigs/wtdbg2/dbg.raw.fa \
+    -o $DIR/kk/2-polish/
+#+end_src
+
+** 3-scaffolds
+- Create bwa database for assembly
+  #+begin_src sh :tangle kk/3-scaffolds/0-ref.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+fasta=$DIR/kk/2-polish/consensus.fasta
+bwa index -a bwtsw $fasta
+samtools faidx $fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=../0-raw/readme.org:kk-hic
+  #+begin_src sh :tangle kk/3-scaffolds/1-bwa.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/../0-raw/)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+fasta=$DIR/kk/2-polish/consensus.fasta
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -5SP -t 48 $fasta $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kk/3-scaffolds/$name.bam
+done
+
+  #+end_src
+
+  | Pair Type        |     Count |       % |      Dups | %Dups/Type_ID_Count | %Dups/All_Dups | %Dups/All_IDs |
+  |------------------+-----------+---------+-----------+---------------------+----------------+---------------|
+  | Both Unmapped    |   7454351 |   2.382 |         0 |               0.000 |          0.000 |         0.000 |
+  | Orphan/Singleton |   6502503 |   2.078 |   3777584 |              58.094 |          2.116 |         1.207 |
+  | Both Mapped      | 298951472 |  95.540 | 174722039 |              58.445 |         97.884 |        55.838 |
+  | Total            | 312908326 | 100.000 | 178499623 |              57.045 |        100.000 |        57.045 |
+
+  Marked 178499623 of 312908326 (57.045%) total read ids as duplicates using
+  2700608k memory in 17M14S(1033.521S) CPU seconds and 1H40M40S(6040S) wall
+  time.
+- Convert bams to single bed
+  #+header: :var data=../0-raw/readme.org:kk-hic[,0]
+  #+begin_src sh :tangle kk/3-scaffolds/2-convert.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bedtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bedtools/bedtools-2.28.0.sif bedtools $@
+}
+
+export ROOT DIR
+export -f bedtools
+
+parallel --eta bedtools bamtobed -i $DIR/kk/3-scaffolds/{}.bam \
+    ::: "${data[@]}" > $DIR/kk/3-scaffolds/2-alignments.bed
+  #+end_src
+- Run SALSA
+  #+begin_src sh :tangle kk/3-scaffolds/3-salsa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+fasta=$DIR/kk/2-polish/consensus.fasta
+
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+    run_pipeline.py \
+    -i 15 \
+    -a $fasta \
+    -l $fasta.fai \
+    -b $DIR/kk/3-scaffolds/2-alignments.bed \
+    -e GATC \
+    -s 590000000 \
+    -o $DIR/kk/3-scaffolds/3-salsa/ \
+    -p yes
+  #+end_src
+
+  #+begin_src sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kk/2-polish/consensus.fasta \
+    $DIR/kk/3-scaffolds/3-salsa/scaffolds_ITERATION_*.fasta \
+    $DIR/kk/3-scaffolds/3-salsa/scaffolds_FINAL.fasta
+
+
+  #+end_src
+
+  #+RESULTS:
+  | name   |   FINAL |   START |  ITER.1 |  ITER.2 |  ITER.3 |  ITER.4 |  ITER.5 |
+  |--------+---------+---------+---------+---------+---------+---------+---------|
+  | n      |     364 |     710 |     468 |     407 |     379 |     364 |     356 |
+  | n:500  |     364 |     710 |     468 |     407 |     379 |     364 |     356 |
+  | L50    |      19 |      50 |      29 |      22 |      20 |      19 |      19 |
+  | min    |    2270 |    2270 |    2270 |    2270 |    2270 |    2270 |    2270 |
+  | N75    | 3762302 | 1590831 | 3121390 | 3441939 | 3528934 | 3762302 | 4348404 |
+  | N50    | 8295611 | 2861712 | 5650938 | 6689557 | 7526887 | 8295611 | 8295611 |
+  | N25    | 14.21e6 | 5195752 | 9256108 | 10.90e6 | 12.68e6 | 14.21e6 | 14.21e6 |
+  | E-size | 9181974 | 3637948 | 6236920 | 8036825 | 8738843 | 9181974 | 9228757 |
+  | max    | 22.95e6 | 13.45e6 | 14.82e6 | 22.95e6 | 22.95e6 | 22.95e6 | 22.95e6 |
+  | sum    | 489.5e6 | 489.5e6 | 489.5e6 | 489.5e6 | 489.5e6 | 489.5e6 | 489.5e6 |
+  #+tblfm: @+I$3..@>$>=$0;e4
+
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.25
+
+cd $DIR/kd/
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_4.fasta \
+    > $DIR/kd/hic.kirkii.paf
+
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/hic.kirkii.paf \
+    -o hic.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+** 4-gapfill
+https://github.com/schmeing/gapless
+#+begin_src sh :tangle kk/4-gapfill/run.sh
+PATH=$PATH:$DIR/apps/gapless/
+
+ml python/3.9.2 minimap2/2.17 zlib/1.2.11
+PATH=$PATH:$DIR/apps/seqtk/:$DIR/apps/racon/build/bin
+
+cd $DIR/kk/4-gapfill/
+
+$DIR/apps/gapless/gapless.sh -j 30 \
+    -i $DIR/kk/3-scaffolds/3-salsa/scaffolds_FINAL.fasta \
+    -t nanopore $DIR/kk/combined.fq
+#+end_src
+
+#+begin_src shell
+ml singularity
+
+singularity exec -B $DIR \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+        $DIR/kk/4-gapfill/gapless_run/*/gapless.fa
+#+end_src
+
+#+RESULTS:
+| name   |       pass1 |       pass2 |       pass3 |
+|--------+-------------+-------------+-------------|
+| n      |        2859 |        3877 |        2886 |
+| n:500  |        2859 |        3876 |        2885 |
+| L50    |         292 |         354 |         275 |
+| min    |         547 |         576 |         557 |
+| N75    |      201490 |      167781 |      249188 |
+| N50    |      417018 |      358342 |      471121 |
+| N25    |      897283 |      746835 |      955904 |
+| E-size |      666765 |      585997 |      759861 |
+| max    |     3760747 |     2828138 |     4369655 |
+| sum    | 479300000.0 | 504400000.0 | 507800000.0 |
+
 ** 2-arrange
 - Orient and arrange using /Gossipiodes kirkii/
   #+begin_src sh :tangle kk/2-arrange/run.sh
@@ -487,6 +714,33 @@ ragtag scaffold -u -t 48 -q 60 -o $DIR/kk/2-arrange/ -i 0.75  \
   #+ATTR_ORG: :width 750
   [[./kk/2-arrange/ragtag.scaffold.fasta.kirkii.png]]
 * Kokia cookei C69
+
+#+begin_src shell
+ml singularity
+
+singularity exec -B $DIR \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kc/1-contigs/hifiasm/hifiasm.bp.p_ctg.fatest.p_ctg.fa \
+    $DIR/kc/2-polish/consensus.fasta \
+    $DIR/kc/3-scaffolds/3-salsa/scaffolds_FINAL.fasta \
+    $DIR/kc/4-gapfill/gapless_run/gapless.fa
+#+end_src
+
+#+RESULTS:
+| name   | 1-contigs | 2-polish | 3-scaffolds | 4-gapfill |
+|--------+-----------+----------+-------------+-----------|
+| n      |      1159 |     1159 |         737 |      1393 |
+| n:500  |      1159 |     1159 |         737 |      1392 |
+| L50    |       132 |      132 |          56 |       166 |
+| min    |      3607 |     3604 |        3604 |       556 |
+| N75    |    636832 |   636974 |      940582 |    496491 |
+| N50    |   1248703 |  1248713 |     2106056 |    936718 |
+| N25    |   2168255 |  2169096 |     5566932 |   1453812 |
+| E-size |   1546437 |  1546714 |     4529403 |   1247270 |
+| max    |   5878698 |  5879258 |     22.92e6 |   5411855 |
+| sum    |   544.6e6 |  544.7e6 |     544.7e6 |   523.7e6 |
+#+tblfm: @<<$2..@>$>=$0;e4
 
 #+header: :var runs=../0-raw/readme.org:kc-nanopore-sup[,1]
 #+begin_src sh :tangle kc/combine.sh
@@ -559,8 +813,6 @@ ml gd/2.3.0
 
 echo $DIR/apps/dotplot/dotplot -t 12 -p grey -o $DIR/$out $DIR/0-ref/kirki.fa $DIR/$genome
     #+end_src
-
-
     #+ATTR_ORG: :width 750
     [[./kc/1-contigs/hifiasm.kirkii.png]]
 - wtdbg2
@@ -663,13 +915,50 @@ montage -geometry +0+0 kc/1-contigs/hifiasm.kirkii.png kc/wtdbg2.kirkii.png kc/1
 Based on the number of contigs, the size of the assembly, and the dotplots, the
 hifiasm looks to be the best out of the four.
 
-** 2-arrange
-- Orient and arrange using /Gossipiodes kirkii/
-  #+begin_src sh
-zcat $DIR/0-ref/kirkii.fa.gz > $DIR/0-ref/kirkii.fa
-  #+end_src
+** 2-polish
+#+begin_src sh :tangle kc/2-polish/medaka.sh
+ROOT=$(git rev-parse --show-toplevel)
+export DIR ROOT
 
-  #+begin_src sh :tangle kc/2-arrange/run.sh
+ml singularity/3.8.3
+
+# clean up singularity medaka command. take the first element as subcommand,
+# then remove it from stack. Pass the remaining stack to medaka cmd.
+medaka () {
+    cmd=medaka_$1
+    shift;
+
+    singularity exec -B $ROOT $DIR/apps/medaka_v1.7.1.sif $cmd $@;
+}
+
+
+medaka consensus -t 48 -m r104_e81_sup_g5015 \
+    -i $DIR/kc/combined.fq \
+    -d $DIR/kc/1-contigs/hifiasm/hifiasm.bp.p_ctg.fatest.p_ctg.fa \
+    -o $DIR/kc/2-polish/
+#+end_src
+
+** 3-arrange
+Orient and arrange using /Gossypium raimondii/, /G. herbaceum/, /G. hirsutum/
+(following method in [fn:PMC6890844], updating genomes used)
+
+- Download chromosomes from A1, D5, and AD1
+   #+begin_src sh :tangle 0-ref/download.sh
+URL=https://www.cottongen.org/cottongen_downloads
+wget -O - --no-check \
+    $URL/Gossypium_raimondii/BYU-Improved_G.raimondii/assembly/D5.v1.pred.fa.gz |
+    zcat > $DIR/0-ref/D5.fa
+wget -O - --no-check \
+    $URL/Gossypium_herbaceum/A1_USDA/assembly/A1.wagad.fasta.gz \
+    zcat > $DIR/0-ref/A1.fa
+wget -O - --no-check \
+    $URL/Gossypium_hirsutum/UTX-TM1_v2.1/assembly/Ghirsutum_527_v2.0.fa.gz |
+    zcat |
+    awk '/>scaffold/ { exit } 1;' > $DIR/0-ref/AD1.fa
+
+   #+end_src
+- Run initial scaffolding
+  #+begin_src sh :tangle kc/3-arrange/1-run.sh
 ROOT=$(git rev-parse --show-toplevel)
 ml singularity
 
@@ -677,28 +966,351 @@ ragtag () {
     singularity exec --no-home -B$ROOT \
         $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
         ragtag.py "$@"
-
 }
 
-ragtag scaffold -u -t 48 -q 60 -o $DIR/kc/2-arrange/ -i 0.75  \
-    $DIR/0-ref/kirkii.fa $DIR/kc/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+for ref in A1 D5 AD1; do
+    ragtag scaffold -r -u -t 48 -q60 -i 0.75 -o $DIR/kc/3-arrange/$ref \
+        $DIR/0-ref/$ref.fa $DIR/kc/2-polish/consensus.fasta
+done
   #+end_src
 
-  #+call: abyss-fac(genome="kc/2-arrange/ragtag.scaffold.fasta")
+- Merge scaffolding
+  #+begin_src sh :tangle kc/3-arrange/2-merge.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+ragtag () {
+    singularity exec --no-home -B$ROOT \
+        $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+        ragtag.py "$@"
+}
+
+ragtag merge --gap-func mean -o $DIR/kc/3-arrange/ \
+    $DIR/kc/2-polish/consensus.fasta \
+    $DIR/kc/3-arrange/{A1,D5,AD1}/ragtag.scaffold.agp
+  #+end_src
+
+
+  #+call: abyss-fac(genome="kc/3-arrange/ragtag.merge.fasta")
 
   #+RESULTS:
-  | n      |       481 |
-  | L50    |         6 |
-  | min    |      3607 |
-  | N75    | 3.648e+07 |
-  | N50    | 3.943e+07 |
-  | N25    | 4.926e+07 |
-  | E-size | 4.110e+07 |
-  | max    | 5.863e+07 |
-  | sum    | 5.446e+08 |
-  #+TBLFM: @4$2..@>$2=$0;%0.3e
+  |   n | n:500 | L50 |  min |     N75 |     N50 |        N25 |  E-size |        max |         sum | name                            |
+  | 663 |   663 |  23 | 3604 | 3806832 | 8321904 | 11140000.0 | 8268079 | 21470000.0 | 544700000.0 | kc/3-arrange/ragtag.merge.fasta |
 
   #+call: dotplot-kirkii(genome="kc/2-arrange/ragtag.scaffold.fasta")
 
   #+ATTR_ORG: :width 750
   [[./kc/2-arrange/ragtag.scaffold.fasta.kirkii.png]]
+** 4-gapfill
+#+begin_src sh :tangle kc/4-gapfill/medaka.sh
+ROOT=$(git rev-parse --show-toplevel)
+export DIR ROOT
+
+ml singularity/3.8.3
+
+# clean up singularity medaka command. take the first element as subcommand,
+# then remove it from stack. Pass the remaining stack to medaka cmd.
+medaka () {
+    cmd=medaka_$1
+    shift;
+
+    singularity exec -B $ROOT $DIR/apps/medaka_v1.7.1.sif $cmd $@;
+}
+
+
+medaka consensus -t 48 -m r104_e81_sup_g5015 \
+    -i $DIR/kc/combined.fq \
+    -d $DIR/kc/3-arrange/ragtag.merge.fasta \
+    -o $DIR/kc/4-gapfill/
+#+end_src
+
+#+call: abyss-fac(genome="kc/4-gapfill/consensus.fasta")
+
+#+RESULTS:
+|   n | n:500 | L50 |  min |     N75 |     N50 |        N25 |  E-size |        max |         sum | name                         |
+| 663 |   663 |  23 | 3603 | 3806925 | 8323802 | 11140000.0 | 8268147 | 21470000.0 | 544800000.0 | kc/4-gapfill/consensus.fasta |
+** 5-scaffold
+- Create bwa database for assembly
+  #+begin_src sh :tangle kc/5-scaffolds/0-ref.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+fasta=$DIR/kc/4-gapfill/consensus.fasta
+bwa index -a bwtsw $fasta
+samtools faidx $fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=../0-raw/readme.org:kc-hic
+  #+begin_src sh :tangle kc/5-scaffolds/1-bwa.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/../0-raw/)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+fasta=$DIR/kc/4-gapfill/consensus.fasta
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -5SP -t 48 $fasta $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kc/5-scaffolds/$name.bam
+done
+
+  #+end_src
+
+  | Pair Type           | Both Unmapped | Orphan/Singleton | Both Mapped |     Total |
+  |---------------------+---------------+------------------+-------------+-----------|
+  | Type_ID_Count       |      20394975 |          4006737 |   294601126 | 319002838 |
+  | %Type/All_IDs       |         6.393 |            1.256 |      92.351 |   100.000 |
+  | Dup_ID_Count        |             0 |          2728848 |   220847018 | 223575866 |
+  | %Dups/Type_ID_Count |         0.000 |           68.106 |      74.965 |    70.086 |
+  | %Dups/All_Dups      |         0.000 |            1.221 |      98.779 |   100.000 |
+  | %Dups/All_IDs       |         0.000 |            0.855 |      69.230 |    70.086 |
+
+   Marked 223575866 of 319002838 (70.086%) total read ids as duplicates using
+  1741292k memory in 20M42S(1241.690S) CPU seconds and 1H45M18S(6318S) wall
+  time.
+- Convert bams to single bed
+  #+header: :var data=../0-raw/readme.org:kc-hic[,0]
+  #+begin_src sh :tangle kc/5-scaffolds/2-convert.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bedtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bedtools/bedtools-2.28.0.sif bedtools $@
+}
+
+export ROOT DIR
+export -f bedtools
+
+parallel --eta bedtools bamtobed -i $DIR/kc/5-scaffolds/{}.bam \
+    ::: "${data[@]}" > $DIR/kc/5-scaffolds/2-alignments.bed
+  #+end_src
+- Run SALSA
+  #+begin_src sh :tangle kc/5-scaffolds/3-salsa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+fasta=$DIR/kc/4-gapfill/consensus.fasta
+
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+    run_pipeline.py \
+    -i 15 \
+    -a $fasta \
+    -l $fasta.fai \
+    -b $DIR/kc/5-scaffolds/2-alignments.bed \
+    -e GATC \
+    -s 590000000 \
+    -o $DIR/kc/5-scaffolds/3-salsa/ \
+    -p yes
+  #+end_src
+
+  #+begin_src shell
+ml singularity
+
+singularity exec -B $DIR \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kc/4-gapfill/consensus.fasta \
+    $DIR/kc/5-scaffolds/3-salsa/assembly.cleaned.fasta \
+    $DIR/kc/5-scaffolds/3-salsa/scaffolds_ITERATION_*.fasta \
+    $DIR/kc/5-scaffolds/3-salsa/scaffolds_FINAL.fasta
+
+
+  #+end_src
+  #+RESULTS:
+  | name   | FINAL.fasta |    original | leaned.fasta | ITERATION_1.fasta | ITERATION_2.fasta | ITERATION_3.fasta | ITERATION_4.fasta | ITERATION_5.fasta | ITERATION_6.fasta |
+  | n      |         497 |         663 |          742 |               590 |               550 |               525 |               508 |               497 |               495 |
+  | n:500  |         497 |         663 |          742 |               590 |               550 |               525 |               508 |               497 |               495 |
+  | L50    |          19 |          23 |           29 |                28 |                24 |                20 |                19 |                19 |                19 |
+  | min    |        3603 |        3603 |         3603 |              3603 |              3603 |              3603 |              3603 |              3603 |              3603 |
+  | N75    |     3506857 |     3806925 |      2132098 |           2535333 |           3415583 |           3415583 |           3474498 |           3506857 |           3506857 |
+  | N50    |     8700255 |     8323802 |      5879451 |           6083096 |           7682295 |           7815923 |           8700255 |           8700255 |           8700255 |
+  | N25    |  16040000.0 |  11140000.0 |   10380000.0 |        10450000.0 |        10980000.0 |        12920000.0 |        14470000.0 |        16040000.0 |        16040000.0 |
+  | E-size |  11050000.0 |     8268147 |      6531792 |           6908418 |           8279370 |        10560000.0 |        10730000.0 |        11050000.0 |        11050000.0 |
+  | max    |  37710000.0 |  21470000.0 |   17510000.0 |        17510000.0 |        29100000.0 |        35850000.0 |        35850000.0 |        37710000.0 |        37710000.0 |
+  | sum    | 544800000.0 | 544800000.0 |  544800000.0 |       544800000.0 |       544800000.0 |       544800000.0 |       544800000.0 |       544800000.0 |       544800000.0 |
+
+** 3-scaffolds
+- Create bwa database for assembly
+  #+begin_src sh :tangle kc/3-scaffolds/0-ref.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+fasta=$DIR/kc/2-polish/consensus.fasta
+bwa index -a bwtsw $fasta
+samtools faidx $fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=../0-raw/readme.org:kc-hic
+  #+begin_src sh :tangle kc/3-scaffolds/1-bwa.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/../0-raw/)
+
+ml singularity
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+fasta=$DIR/kc/2-polish/consensus.fasta
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -5SP -t 48 $fasta $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kc/3-scaffolds/$name.bam
+done
+
+  #+end_src
+
+
+  | Pair Type        |     Count |       % |      Dups | %Dups/Type_ID_Count | %Dups/All_Dups | %Dups/All_IDs |
+  |------------------+-----------+---------+-----------+---------------------+----------------+---------------|
+  | Both Unmapped    |  20400099 |   6.395 |         0 |               0.000 |          0.000 |         0.000 |
+  | Orphan/Singleton |   4044340 |   1.268 |   2750819 |              68.017 |          1.236 |         0.862 |
+  | Both Mapped      | 294558399 |  92.337 | 219717370 |              74.592 |         98.764 |        68.876 |
+  | Total            | 319002838 | 100.000 | 222468189 |              69.739 |        100.000 |        69.739 |
+
+  Marked 222468189 of 319002838 (69.739%) total read ids as duplicates using
+  1781960k memory in 20M54S(1253.883S) CPU seconds and 1H45M28S(6328S) wall
+  time.
+
+
+- Convert bams to single bed
+  #+header: :var data=../0-raw/readme.org:kc-hic[,0]
+  #+begin_src sh :tangle kc/3-scaffolds/2-convert.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bedtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bedtools/bedtools-2.28.0.sif bedtools $@
+}
+
+export ROOT DIR
+export -f bedtools
+
+parallel --eta bedtools bamtobed -i $DIR/kc/3-scaffolds/{}.bam \
+    ::: "${data[@]}" > $DIR/kc/3-scaffolds/2-alignments.bed
+  #+end_src
+- Run SALSA
+  #+begin_src sh :tangle kc/3-scaffolds/3-salsa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+fasta=$DIR/kc/2-polish/consensus.fasta
+
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+    run_pipeline.py \
+    -i 15 \
+    -a $fasta \
+    -l $fasta.fai \
+    -b $DIR/kc/3-scaffolds/2-alignments.bed \
+    -e GATC \
+    -s 590000000 \
+    -o $DIR/kc/3-scaffolds/3-salsa/ \
+    -p yes
+  #+end_src
+
+  #+begin_src sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kc/2-polish/consensus.fasta \
+    $DIR/kc/3-scaffolds/3-salsa/scaffolds_ITERATION_*.fasta \
+    $DIR/kc/3-scaffolds/3-salsa/scaffolds_FINAL.fasta
+
+
+  #+end_src
+  #+RESULTS:
+  | name   | FINAL.fasta |    original | ITERATION_1.fasta | ITERATION_2.fasta | ITERATION_3.fasta | ITERATION_4.fasta | ITERATION_5.fasta | ITERATION_6.fasta |
+  | n      |         737 |        1159 |               894 |               789 |               754 |               741 |               737 |               736 |
+  | n:500  |         737 |        1159 |               894 |               789 |               754 |               741 |               737 |               736 |
+  | L50    |          56 |         132 |               106 |                75 |                61 |                57 |                56 |                56 |
+  | min    |        3604 |        3604 |              3604 |              3604 |              3604 |              3604 |              3604 |              3604 |
+  | N75    |      940582 |      636974 |            754651 |            911654 |            937824 |            940582 |            940582 |            940582 |
+  | N50    |     2106056 |     1248713 |           1423432 |           1762657 |           2079053 |           2106056 |           2106056 |           2106056 |
+  | N25    |     5566932 |     2169096 |           2647653 |           3731325 |           5309613 |           5566932 |           5566932 |           5566932 |
+  | E-size |     4529403 |     1546714 |           1938599 |           2829549 |           3676764 |           4266130 |           4529403 |           4529519 |
+  | max    |  22920000.0 |     5879258 |           5935774 |        12340000.0 |        20720000.0 |        22920000.0 |        22920000.0 |        22920000.0 |
+  | sum    | 544700000.0 | 544700000.0 |       544700000.0 |       544700000.0 |       544700000.0 |       544700000.0 |       544700000.0 |       544700000.0 |
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.25
+
+cd $DIR/kd/
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_4.fasta \
+    > $DIR/kd/hic.kirkii.paf
+
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/hic.kirkii.paf \
+    -o hic.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+** 4-gapfill
+https://github.com/schmeing/gapless
+#+begin_src sh :tangle kc/4-gapfill/run.sh
+PATH=$PATH:$DIR/apps/gapless/
+
+ml python/3.9.2 minimap2/2.17 zlib/1.2.11
+PATH=$PATH:$DIR/apps/seqtk/:$DIR/apps/racon/build/bin
+
+cd $DIR/kc/4-gapfill/
+
+$DIR/apps/gapless/gapless.sh -j 30 \
+    -i $DIR/kc/3-scaffolds/3-salsa/scaffolds_FINAL.fasta \
+    -t nanopore $DIR/kc/combined.fq
+#+end_src
+
+#+begin_src shell
+ml singularity
+
+singularity exec -B $DIR \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+        $DIR/kc/4-gapfill/gapless_run/*/gapless.fa
+#+end_src
+
+#+RESULTS:
+
