@@ -1,0 +1,21 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+all.gds
+
+# bwa database
+0-ref/Kd.contigs.fa.amb
+0-ref/Kd.contigs.fa.ann
+0-ref/Kd.contigs.fa.bwt
+0-ref/Kd.contigs.fa.fai
+0-ref/Kd.contigs.fa.pac
+0-ref/Kd.contigs.fa.sa
+
+1-align/0-ref.kd.sh
+1-align/1-bwa.sh
+
+2-coverage/1-depth.sh
+
+3-variants/1-call.sh
