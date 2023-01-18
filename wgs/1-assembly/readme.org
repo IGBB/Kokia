@@ -1,5 +1,5 @@
 #+TITLE: Assembly
-#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+#+PROPERTY:  header-args :var DIR=(file-name-directory (file-local-name buffer-file-name))
 
 #+name: transpose
 #+header: table=""
@@ -278,6 +278,7 @@ canu \
 
 * Kokia kauaiensis S9
 
+
 ** 1-contigs
 #+header: :var runs=../0-raw/readme.org:kk-nanopore-sup[,1]
 #+begin_src sh :tangle kk/combine.sh
@@ -306,7 +307,7 @@ $DIR/apps/shasta-0.10.0 \
   #+header: :var genome="kk/1-contigs/shasta/Assembly.fasta"
   #+begin_src sh
 ROOT=$(git rev-parse --show-toplevel)
-ml singularity/3.7.3
+ml singularity/3.8.3
 
 singularity exec -B $ROOT \
     /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
@@ -325,6 +326,7 @@ singularity exec -B $ROOT \
   | max    |      238763 |
   | sum    | 277400000.0 |
   | name   |   kk/shasta |
+
 - hifiasm
 #+begin_src sh :tangle kk/1-contigs/hifiasm.sh
 PATH=$DIR/apps/hifiasm-0.16.1/:$PATH
@@ -416,10 +418,168 @@ canu -p canu -d $DIR/kk/1-contigs/canu/ useGrid=true gridOptions=-Agbru_kokia \
   | sum    | 583800000.0 |
   | name   |    kk/canu/ |
 
+- flye
 
-#+begin_src sh
+modified =Flye/flye/config/bin_cfg/asm_nano_hq.cfg= based on the following quote provided by Tony from [[https://community.nanoporetech.com/docs/plan/best_practice/kit-14-device-and-informatics/v/k14_s1019_v1_revg_29jun2022][here]]
+
+#+begin_quote
+Configuring the command line parameter --min-overlap 10000 should deliver a modest improvement in assembly contiguity when using libraries optimised for read length.
+It is recommended that the --nano-corr parameter is set (to specify that the sequences are "corrected"). This provides a significant improvement to assembly NG50 compared to when the --nano-raw (uncorrected sequence) setting is used. We have observed NG50 increases from 58 Mb to 67 Mb for collapsed assemblies, when assembling both haplotypes at once.
+We typically adjust the "asm_corrected_reads.cfg file in the flye/config/bin_cfg/ folder to increase haplotype-specific assembly NG50s and to remove any major misjoins.
+a. enable homopolymer compressed scoring (hpc_scoring_on = 1)
+b. increase the minimizer_window to 10
+c. decrease the repeat_graph_ovlp_divergence to 0.005 increases haplotype-specific assembly NG50s to 84 Mb/84 Mb and removes all major misjoins
+#+end_quote
+
+  #+begin_src shell :tangle kk/1-contigs/flye/run.sh
+ml python/3.9.2
+python3 $DIR/apps/Flye/bin/flye \
+        --nano-hq $DIR/kk/combined.fq \
+        --min-overlap 10000 \
+        -o $DIR/kk/1-contigs/flye/ \
+        -t 40
+  #+end_src
+
+    #+begin_src shell :tangle kk/1-contigs/flye_polish_10/run.sh
+ml python/3.9.2
+python3 $DIR/apps/Flye/bin/flye \
+        --nano-hq $DIR/kk/combined.fq \
+        --min-overlap 10000 \
+        -o $DIR/kk/1-contigs/flye_polish_10/ \
+        -i 10 \
+        -t 20
+  #+end_src
+
+  #+call: abyss-fac(genome="kk/1-contigs/flye/assembly.fasta")
+
+  #+RESULTS:
+  | n      |                             7831 |
+  | n:500  |                             7830 |
+  | L50    |                             1455 |
+  | min    |                              528 |
+  | N75    |                            59817 |
+  | N50    |                           112586 |
+  | N25    |                           192405 |
+  | E-size |                           139951 |
+  | max    |                           721500 |
+  | sum    |                      547000000.0 |
+  | name   | kk/1-contigs/flye/assembly.fasta |
+
+
+modified =Flye/flye/config/bin_cfg/asm_corrected_reads.cfg= based on the following quote provided by Tony from [[https://community.nanoporetech.com/docs/plan/best_practice/kit-14-device-and-informatics/v/k14_s1019_v1_revg_29jun2022][here]]
+
+#+begin_quote
+Configuring the command line parameter --min-overlap 10000 should deliver a modest improvement in assembly contiguity when using libraries optimised for read length.
+It is recommended that the --nano-corr parameter is set (to specify that the sequences are "corrected"). This provides a significant improvement to assembly NG50 compared to when the --nano-raw (uncorrected sequence) setting is used. We have observed NG50 increases from 58 Mb to 67 Mb for collapsed assemblies, when assembling both haplotypes at once.
+We typically adjust the "asm_corrected_reads.cfg file in the flye/config/bin_cfg/ folder to increase haplotype-specific assembly NG50s and to remove any major misjoins.
+a. enable homopolymer compressed scoring (hpc_scoring_on = 1)
+b. increase the minimizer_window to 10
+c. decrease the repeat_graph_ovlp_divergence to 0.005 increases haplotype-specific assembly NG50s to 84 Mb/84 Mb and removes all major misjoins
+#+end_quote
+
+  #+begin_src shell :tangle kk/1-contigs/flye_corr/run.sh
+ml python/3.9.2
+python3 $DIR/apps/Flye/bin/flye \
+        --nano-corr $DIR/kk/combined.fq \
+        --min-overlap 10000 \
+        -o $DIR/kk/1-contigs/flye_corr/ \
+        -t 40
+  #+end_src
+
+    #+begin_src shell :tangle kk/1-contigs/flye_corr_polish_10/run.sh
+ml python/3.9.2
+python3 $DIR/apps/Flye/bin/flye \
+        --nano-corr $DIR/kk/combined.fq \
+        --min-overlap 10000 \
+        -o $DIR/kk/1-contigs/flye_corr_polish_10/ \
+        -i 10 \
+        -t 20
+  #+end_src
+
+  #+call: abyss-fac(genome="kk/1-contigs/flye_corr/assembly.fasta")
+
+  #+RESULTS:
+  | n      |                                  6994 |
+  | n:500  |                                  6992 |
+  | L50    |                                  1282 |
+  | min    |                                   508 |
+  | N75    |                                 66664 |
+  | N50    |                                124051 |
+  | N25    |                                214308 |
+  | E-size |                                155190 |
+  | max    |                                835109 |
+  | sum    |                           534400000.0 |
+  | name   | kk/1-contigs/flye_corr/assembly.fasta |
+
+- hifiasm + hic phasing
+
+  #+begin_src sh :tangle 1-contigs/hifiasm.phase/run.sh
+PATH=$DIR/apps/hifiasm/:$PATH
+
+hifiasm -t 48 -o $DIR/1-contigs/hifiasm.phase/genome \
+    --h1 $DIR/hic-1.fq.gz --h2 $DIR/hic-2.fq.gz \
+    $DIR/kk/combined.fq
+  #+end_src
+
+  - stats for all steps of assembly
+    #+begin_src sh :tangle 1-contigs/hifiasm.phase/stats.sh
+ml singularity
+for file in $DIR/1-contigs/hifiasm.phase/*tg.gfa; do
+    name=$(basename $file .gfa)
+    echo $name
+    awk '/^S/{print ">"$2;print $3}' $file |
+        singularity exec \
+            /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+            /usr/lib/abyss/abyss-fac
+    done
+    #+end_src
+
+    #+RESULTS:
+    |        | hap1.p_ctg | hap2.p_ctg |   p_ctg |  p_utg |   r_utg |
+    |--------+------------+------------+---------+--------+---------|
+    | n      |      26223 |      19372 |   19068 | 122093 |  209639 |
+    | n:500  |      26223 |      19372 |   19068 | 122093 |  209639 |
+    | L50    |       4479 |       4098 |    3174 |  17668 |   38157 |
+    | min    |        784 |       2041 |     784 |    736 |     549 |
+    | N75    |      86016 |      90966 |  143428 |  29982 |   16629 |
+    | N50    |     154423 |     155932 |  267102 |  71170 |   37222 |
+    | N25    |     254397 |     255839 |  473225 | 132325 |   70755 |
+    | E-size |     189646 |     193792 |  352843 |  98338 |   50435 |
+    | max    |    1472460 |    1402750 | 2041097 | 942329 |  398672 |
+    | sum    |    2.264e9 |    2.085e9 | 2.928e9 | 4.56e9 | 5.188e9 |
+  - =tar= output files (sorted by relevance and size)
+
+    #+begin_src shell :tangle 1-contigs/hifiasm.phase/tar.sh
+tar -czf $DIR/1-contigs/hifiasm.phase.tar.gz \
+    -C   $DIR/1-contigs/hifiasm.phase/ \
+    genome.hic.hap1.p_ctg.gfa \
+    genome.hic.hap2.p_ctg.gfa \
+    genome.hic.p_ctg.gfa \
+    genome.hic.p_utg.gfa \
+    genome.hic.r_utg.gfa \
+    genome.hic.hap2.p_ctg.noseq.gfa \
+    genome.hic.hap1.p_ctg.noseq.gfa \
+    genome.hic.p_ctg.noseq.gfa \
+    genome.hic.p_utg.noseq.gfa \
+    genome.hic.r_utg.noseq.gfa \
+    genome.hic.hap2.p_ctg.lowQ.bed \
+    genome.hic.hap1.p_ctg.lowQ.bed \
+    genome.hic.p_ctg.lowQ.bed \
+    genome.hic.p_utg.lowQ.bed \
+    genome.hic.r_utg.lowQ.bed \
+    genome.hic.lk.bin \
+    genome.ovlp.reverse.bin \
+    genome.ovlp.source.bin \
+    genome.ec.bin \
+    genome.hic.tlb.bin
+    #+end_src
+
+
+- comparison
+
+#+begin_src sh :colnames '("Statistic" "shasta" "canu" "wtdbg2" "hifasm" "flye (nano-hq)" "flye (nano-corr)")
 ROOT=$(git rev-parse --show-toplevel)
-ml singularity/3.7.3
+ml singularity/3.8.3
 
 singularity exec -B $ROOT \
     /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
@@ -427,22 +587,24 @@ singularity exec -B $ROOT \
         kk/1-contigs/shasta/Assembly.fasta \
         kk/1-contigs/canu/canu.contigs.fasta \
         kk/1-contigs/wtdbg2/dbg.raw.fa \
-        kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa
+        kk/1-contigs/hifiasm/hifiasm.bp.p_ctg.fatest.p_ctg.fa \
+        kk/1-contigs/flye/assembly.fasta \
+        kk/1-contigs/flye_corr/assembly.fasta
 #+end_src
 
 #+RESULTS:
-|        |   shasta |     canu |   wtdbg2 |  hifiasm |
-|--------+----------+----------+----------+----------|
-| n      |    13671 |     8047 |      710 |     2625 |
-| n:500  |    13501 |     8047 |      710 |     2625 |
-| L50    |     2894 |      521 |       50 |      297 |
-| min    |      507 |     1114 |     2261 |     3598 |
-| N75    |    17224 |   103348 |  1590418 |   213535 |
-| N50    |    29894 |   280353 |  2861231 |   483159 |
-| N25    |    48305 |   572593 |  5194771 |   906223 |
-| E-size |    36036 |   530926 |  3637209 |   721462 |
-| max    |   238763 |  7688614 | 13440000 |  4146154 |
-| sum    | 277.4 Mb | 583.8 Mb | 489.4 Mb | 536.1 Mb |
+| name   |   shasta |      canu |     wtdbg2 |  hifiasm | flye (nano-hq) | flye (nano-corr) |
+|--------+----------+-----------+------------+----------+----------------+------------------|
+| n      |    13671 |      8047 |        710 |     2625 |           7831 |             6994 |
+| n:500  |    13501 |      8047 |        710 |     2625 |           7830 |             6992 |
+| L50    |     2894 |       521 |         50 |      297 |           1455 |             1282 |
+| min    |      507 |      1114 |       2261 |     3598 |            528 |              508 |
+| N75    |    17224 |    103348 |    1590418 |   213535 |          59817 |            66664 |
+| N50    |    29894 |    280353 |    2861231 |   483159 |         112586 |           124051 |
+| N25    |    48305 |    572593 |    5194771 |   906223 |         192405 |           214308 |
+| E-size |    36036 |    530926 |    3637209 |   721462 |         139951 |           155190 |
+| max    |   238763 |   7688614 | 13440000.0 |  4146154 |         721500 |           835109 |
+| sum    | 277.4 Mb | 583.48 Mb |   489.4 Mb | 536.1 Mb |       547.0 Mb |         534.4 Mb |
 
 #+ATTR_ORG: :width 750
 [[./kk/1-contigs/hifiasm.bp.p_ctg.fatest.p_ctg.fa.kirkii.png]]
