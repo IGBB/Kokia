@@ -33,13 +33,17 @@ cp -r $SCRATCH/super $DIR/$id/
 
 ** Nanopore
 
+The machine crashed twice on the last run (suspected graphics cards or cooling
+issues).
 #+NAME: kk-nanopore-runs
-| ID       | Directory                             |
-|----------+---------------------------------------|
-| FAT17276 | Kk/20220401_1133_X3_FAT17276_1c6df87c |
-| FAT09348 | Kk/20220401_1507_X4_FAT09348_18327be0 |
-| FAU07188 | Kk/20220610_1415_X4_FAU07188_e2f8daf7 |
-| FAU08590 | Kk/20220610_1415_X5_FAU08590_f1023326 |
+| ID         | Directory                             |
+|------------+---------------------------------------|
+| FAT17276   | Kk/20220401_1133_X3_FAT17276_1c6df87c |
+| FAT09348   | Kk/20220401_1507_X4_FAT09348_18327be0 |
+| FAU07188   | Kk/20220610_1415_X4_FAU07188_e2f8daf7 |
+| FAU08590   | Kk/20220610_1415_X5_FAU08590_f1023326 |
+| FAU93705.1 | Kk/20230207_2137_X3_FAU93705_83076433 |
+| FAU93705.2 | Kk/20230208_1718_X3_FAU93705_32b3c63f |
 
 
 First two runs were super basecalled on the GridION. This took 9 days while
@@ -191,15 +195,18 @@ Hi-C library made by Phase-Genomics plant kit
 
 * Kokia cookei C69
 ** Nanopore
-#+NAME: kc-nanopore-runs
-| ID       | Directory                              |
-|----------+----------------------------------------|
-| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd/ |
-| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096/ |
-| FAU08661 | Kc/20220610_1415_X1_FAU08661_325fe942/ |
-| FAU08677 | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/ |
-
 Kc runs follow the same patter as Kk above.
+
+#+NAME: kc-nanopore-runs
+| ID         | Directory                              |
+|------------+----------------------------------------|
+| FAT09344   | Kc/20220401_1133_X1_FAT09344_ed52cffd/ |
+| FAT12726   | Kc/20220401_1507_X2_FAT12726_12343096/ |
+| FAU08661   | Kc/20220610_1415_X1_FAU08661_325fe942/ |
+| FAU08677   | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/ |
+| FAU95766.1 | Kc/20230207_2137_X1_FAU95766_25130a77/ |
+| FAU95766.2 | Kc/20230208_1718_X1_FAU95766_6dbf6786/ |
+
 #+NAME: kc-nanopore-sup
 | ID       | Directory                                            |
 |----------+------------------------------------------------------|
