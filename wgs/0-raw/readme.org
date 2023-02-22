@@ -1,16 +1,12 @@
 #+TITLE: Whole Genome Sequencing Samples
-#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+#+PROPERTY:  header-args :var DIR=(my/dir)
 
 #+name: basecaller
 #+begin_src sh
-ml singularity
 ROOT=$(git rev-parse --show-toplevel)
+DIR=$ROOT/wgs/0-raw/
 
-guppy () {
-    singularity exec -B$ROOT ~/guppy-gpu.sif guppy_basecaller "$@"
-}
-
-
+PATH=$DIR/ont-guppy/bin/:$PATH
 id="${flowcells[$SLURM_ARRAY_TASK_ID]}"
 
 SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
@@ -20,20 +16,22 @@ cp $DIR/$id/fast5_all.tar $SCRATCH
 mkdir $SCRATCH/fast5/ $SCRATCH/super
 tar -C $SCRATCH/fast5 -xvf $SCRATCH/fast5_all.tar
 
-guppy -c dna_r10.4_e8.1_sup.cfg \
+guppy_basecaller -c dna_r10.4.1_e8.2_260bps_sup.cfg \
     --compress_fastq \
-    --device "cuda:all:100%" \
+    --device "cuda:1:100%" \
     --input_path $SCRATCH/fast5 \
     --save_path $SCRATCH/super
 
 cp -r $SCRATCH/super $DIR/$id/
 #+end_src
 
+#+RESULTS: basecaller
+
 * Kokia kauaiensis S9
 
 ** Nanopore
 
-The machine crashed twice on the last run (suspected graphics cards or cooling
+The machine crashed several times on the last couple run (suspected software
 issues).
 #+NAME: kk-nanopore-runs
 | ID         | Directory                             |
@@ -44,20 +42,26 @@ issues).
 | FAU08590   | Kk/20220610_1415_X5_FAU08590_f1023326 |
 | FAU93705.1 | Kk/20230207_2137_X3_FAU93705_83076433 |
 | FAU93705.2 | Kk/20230208_1718_X3_FAU93705_32b3c63f |
-
+| FAU92850.1 | Kk/20230215_2215_X5_FAU92850_879f24da |
+| FAU92850.2 | Kk/20230217_1422_X5_FAU92850_880260d2 |
+| FAU92850.3 | Kk/20230218_0141_X5_FAU92850_5e177b5a |
 
 First two runs were super basecalled on the GridION. This took 9 days while
-using the A100s takes 8hrs. So, the second set of runs (20220610) were super
-basecalled on the A110s, making the names slightly different, hence the new
+using the V100s takes 8hrs. So, the second set of runs (20220610) were super
+basecalled on the V100s, making the names slightly different, hence the new
 table.
 #+NAME: kk-nanopore-sup
-| ID       | Directory                                            |
-|----------+------------------------------------------------------|
-| FAT17276 | Kk/20220401_1133_X3_FAT17276_1c6df87c/fastq_pass.tar |
-| FAT09348 | Kk/20220401_1507_X4_FAT09348_18327be0/fastq_pass.tar |
-| FAU07188 | Kk/20220610_1415_X4_FAU07188_e2f8daf7/super.pass.tar |
-| FAU08590 | Kk/20220610_1415_X5_FAU08590_f1023326/super.pass.tar |
-
+| ID         | Directory                                            |
+|------------+------------------------------------------------------|
+| FAT17276   | Kk/20220401_1133_X3_FAT17276_1c6df87c/fastq_pass.tar |
+| FAT09348   | Kk/20220401_1507_X4_FAT09348_18327be0/fastq_pass.tar |
+| FAU07188   | Kk/20220610_1415_X4_FAU07188_e2f8daf7/super.pass.tar |
+| FAU08590   | Kk/20220610_1415_X5_FAU08590_f1023326/super.pass.tar |
+| FAU93705.1 | Kk/20230207_2137_X3_FAU93705_83076433/super.pass.tar |
+| FAU93705.2 | Kk/20230208_1718_X3_FAU93705_32b3c63f/super.pass.tar |
+| FAU92850.1 | Kk/20230215_2215_X5_FAU92850_879f24da/super.pass.tar |
+| FAU92850.2 | Kk/20230217_1422_X5_FAU92850_880260d2/super.pass.tar |
+| FAU92850.3 | Kk/20230218_0141_X5_FAU92850_5e177b5a/super.pass.tar |
 
 - =tar= data :: =tar='ing =fastq= and =fast5= files to simplify transfer. Both
   pass and fail =fast5= files are added together. The file name labels the data
@@ -134,14 +138,14 @@ done
 - Super Basecalling
 
   #+header: :var flowcells=kk-nanopore-runs[,1]
-  #+begin_src sh :tangle basecall.kk.sh :noweb yes
+  #+begin_src shell :tangle basecall.kk.k14.sh :noweb yes
 <<basecaller>>
   #+end_src
 
   - =tar= sup basecalled reads
 
     #+name: backup-sup
-    #+header: :var flowcells=kk-nanopore-runs[4:5,1]
+    #+header: :var flowcells=kk-nanopore-runs[8:10,1]
     #+begin_src sh :tangle backup-sup.kk.sh
 
 check () {
@@ -166,7 +170,7 @@ for id in "${flowcells[@]}"; do
         check $?
 
         printf "tar files [$dir] ......... "
-        tar -C super/$dir -vcf super.$dir.tar ./
+        tar -C super/$dir -cf super.$dir.tar ./
         check $?
 
         printf "post-tar md5sum [$dir] ... "
@@ -206,25 +210,35 @@ Kc runs follow the same patter as Kk above.
 | FAU08677   | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/ |
 | FAU95766.1 | Kc/20230207_2137_X1_FAU95766_25130a77/ |
 | FAU95766.2 | Kc/20230208_1718_X1_FAU95766_6dbf6786/ |
+| FAU97335.1 | Kc/20230215_2215_X4_FAU97335_633c4b27  |
+| FAU97335.2 | Kc/20230217_1422_X4_FAU97335_1ba4d19b  |
+| FAU97335.3 | Kc/20230218_0141_X4_FAU97335_37bfe488  |
+
+
 
 #+NAME: kc-nanopore-sup
-| ID       | Directory                                            |
-|----------+------------------------------------------------------|
-| FAT09344 | Kc/20220401_1133_X1_FAT09344_ed52cffd/fastq_pass.tar |
-| FAT12726 | Kc/20220401_1507_X2_FAT12726_12343096/fastq_pass.tar |
-| FAU08661 | Kc/20220610_1415_X1_FAU08661_325fe942/super.pass.tar |
-| FAU08677 | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/super.pass.tar |
+| ID         | Directory                                            |
+|------------+------------------------------------------------------|
+| FAT09344   | Kc/20220401_1133_X1_FAT09344_ed52cffd/fastq_pass.tar |
+| FAT12726   | Kc/20220401_1507_X2_FAT12726_12343096/fastq_pass.tar |
+| FAU08661   | Kc/20220610_1415_X1_FAU08661_325fe942/super.pass.tar |
+| FAU08677   | Kc/20220610_1415_X2_FAU08677_f6a3b4f3/super.pass.tar |
+| FAU95766.1 | Kc/20230207_2137_X1_FAU95766_25130a77/super.pass.tar |
+| FAU95766.2 | Kc/20230208_1718_X1_FAU95766_6dbf6786/super.pass.tar |
+| FAU97335.1 | Kc/20230215_2215_X4_FAU97335_633c4b27/super.pass.tar |
+| FAU97335.2 | Kc/20230217_1422_X4_FAU97335_1ba4d19b/super.pass.tar |
+| FAU97335.3 | Kc/20230218_0141_X4_FAU97335_37bfe488/super.pass.tar |
 
 - =tar= data :: see Kk
 - Super Basecalling
 
   #+header: :var flowcells=kc-nanopore-runs[,1]
-  #+begin_src sh :tangle basecall.kc.sh :noweb yes
+  #+begin_src sh :tangle basecall.kc.k14.sh :noweb yes
 <<basecaller>>
   #+end_src
   - =tar= sup basecalled reads
 
-    #+header: :var flowcells=kc-nanopore-runs[4:5,1]
+    #+header: :var flowcells=kc-nanopore-runs[8:10,1]
     #+begin_src sh :tangle backup-sup.kc.sh :noweb yes
 <<backup-sup>>
     #+end_src
