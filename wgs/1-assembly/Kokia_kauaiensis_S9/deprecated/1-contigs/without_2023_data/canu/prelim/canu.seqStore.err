@@ -1,0 +1,39 @@
+
+Found perl:
+   /bin/perl
+   This is perl 5, version 16, subversion 3 (v5.16.3) built for x86_64-linux-thread-multi
+
+Found java:
+   /bin/java
+   openjdk version "1.8.0_262"
+
+Found canu:
+   /project/90daydata/gbru_tmp-amanda/Kokia/wgs/1-assembly/apps/canu-2.2/bin/canu
+   canu 2.2
+
+
+Creating library 'SHA256E-s7257490812--24e7bcab7b1e59f6ba51411f038d5df5bb50aa5139ca099df634b855fdbae8a0' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       1508805  90.0%   6401255064  98.3%  /project/90daydata/gbru_tmp-amanda/Kokia/.git/annex/objects/02/1f/SHA256E-s7257490812--24e7bcab7b1e59f6ba51411f038d5df5bb50aa5139ca099df634b855fdbae8a0.fq.gz/SHA256E-s7257490812--24e7bcab7b1e59f6ba51411f038d5df5bb50aa5139ca099df634b855fdbae8a0.fq.gz
+Short         167704  10.0%    111350335   1.7%
+
+
+Creating library 'SHA256E-s6584897573--bb40b9757c9c8d77533493ddd15a66a2d104bdb85edc33b62278684ca2ccf9ec' for Nanopore raw reads.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       1324632  90.5%   5833411075  98.4%  /project/90daydata/gbru_tmp-amanda/Kokia/.git/annex/objects/Kg/gf/SHA256E-s6584897573--bb40b9757c9c8d77533493ddd15a66a2d104bdb85edc33b62278684ca2ccf9ec.fq.gz/SHA256E-s6584897573--bb40b9757c9c8d77533493ddd15a66a2d104bdb85edc33b62278684ca2ccf9ec.fq.gz
+Short         139605   9.5%     92005340   1.6%
+
+
+All reads processed.
+
+               reads               bases
+---------- --------- ------ ------------ ------
+Loaded       2833437  90.2%  12234666139  98.4%
+Short         307309   9.8%    203355675   1.6%
+
+
+Bye.
