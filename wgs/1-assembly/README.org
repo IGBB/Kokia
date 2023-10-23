@@ -1,0 +1,3533 @@
+#+TITLE: Assembly of Three Kokia Genomes
+#+property: header-args            :var DIR=(file-name-directory (file-local-name buffer-file-name)) :exports none :eval never-export
+#+property: header-args:sh         :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
+#+property: header-args:shell      :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
+#+property: header-args:bash       :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+#+property: header-args:python     :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+#+property: header-args:R          :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+#+property: header-args:lua        :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+#+property: header-args:lst        :tangle (tangle-path)
+#+property: header-args:emacs-lisp :results silent
+
+#+name: local-functions
+#+begin_src emacs-lisp
+(defun make-path (path &optional script)
+  (let ((path (apply 'file-name-concat path)))
+    (if script
+        (expand-file-name script path)
+      (expand-file-name path))))
+
+(defun get-language (block)
+  (org-element-property :language (org-element-context)))
+
+(defun get-name ()
+  (org-element-property :name (org-element-context)))
+
+(defun get-extension ()
+  (alist-get (get-language (get-name))
+             '(("emacs-lisp" . "el")
+               ("shell" . "sh")
+               ("lua" . "lua")
+               ("sh" . "sh")
+               ("python" . "py")
+               ("lst" . "lst")
+               ("R" . "R")) "" nil 'string-equal))
+
+(defun get-filename ()
+  (expand-file-name (buffer-file-name) (file-name-directory buffer-file-name)))
+
+(defun make-name ()
+  (format "%s.%s" (get-name) (get-extension)))
+
+(defun tangle-path ()
+  (string-replace " " "_" (make-path (org-get-outline-path t) (make-name))))
+
+(defun get-working-directory ()
+  (string-replace " " "_" (make-path (org-get-outline-path t))))
+#+end_src
+
+#+begin_src emacs-lisp
+(setq org-babel-python-command "/apps/python-3.9.2/bin/python3")
+(setq org-babel-R-command "/apps/r-4.0.2/bin/R --slave --no-save")
+#+end_src
+
+* repository :noexport:
+
+#+begin_src txt :tangle .gitignore
+*.sh
+*.R
+*.py
+*.amb
+*.ann
+*.bwt
+*.fai
+*.pac
+*.sa
+*.paf
+*.tsv
+*.log
+*.mmi
+*.json
+*.gfa
+*.gv
+*.nodes
+*.kmerdep
+*.binkmer
+*.clp
+*.clps
+*.reads
+*.conf
+*.bin
+*.bai
+*.lst
+*.err
+*.hdf
+\#*.\#
+apps/
+#+end_src
+
+#+name: add-hline
+#+begin_src emacs-lisp
+(let* ((table (cons (car table) (cons 'hline (cdr table)))))
+  (print table))
+#+end_src
+
+Export this README to HTML, then evaluate the following code block.
+#+name: build-report-archive
+#+begin_src shell :results silent
+ml fd
+rm $DIR/report.zip
+fd -e png -x install -D -m 644 {} report/images/{}
+cp README.html report/
+zip -qr $DIR/report.zip report
+#+end_src
+
+#+comment: mapcar* function from https://www.gnu.org/software/emacs/manual/html_node/elisp/Mapping-Functions.html#Definition-of-mapcar
+#+name: transpose-abyss-fac
+#+begin_src emacs-lisp :var table=""
+(defun mapcar* (function &rest args)
+  "Apply FUNCTION to successive cars of all ARGS.
+Return the list of results."
+  ;; If no list is exhausted,
+  (if (not (memq nil args))
+      ;; apply function to CARs.
+      (cons (apply function (mapcar #'car args))
+            (apply #'mapcar* function
+                   ;; Recurse for rest of elements.
+                   (mapcar #'cdr args)))))
+
+(let* ((table (if (list table)(apply #'mapcar* #'list table) nil))
+       (table (cons (car (last table)) (cons 'hline (butlast table 1)))))
+  (print table))
+#+end_src
+
+#+name: genome-string
+#+begin_src emacs-lisp
+(string-join (flatten-tree genomes) " ")
+#+end_src
+
+#+name: abyss
+#+begin_src shell
+cd $DIR
+abyss-fac $genome
+#+end_src
+
+#+name: abyss-summary
+#+begin_src shell :noweb yes :post transpose-abyss-fac(table=*this*)
+<<abyss>> | perl -pe 's/K[^\/]+\/([0-9]-[\w-]+)\/.*/\1/g'
+#+end_src
+
+* apps :noexport:
+** modules
+*** extract
+
+#+name: 0.2.0
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/adamthrash/extract")
+whatis("Description: extract regions from fasta file, allowing for subsets and inversions")
+
+-- ml rust
+-- cargo install --git https://github.com/adamthrash/extract --root $DIR/apps/extract/0.2.0
+#+end_src
+*** fd
+
+#+name: 8.7.0
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/sharkdp/fd")
+whatis("Description: A simple, fast and user-friendly alternative to 'find'")
+
+-- ml rust
+-- cargo install --git https://github.com/sharkdp/fd.git  --tag v8.7.0 --root $DIR/apps/fd/8.7.0
+#+end_src
+
+*** parallel
+
+#+name: 20230422
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://www.gnu.org/software/parallel/")
+whatis("Description: A shell tool for executing jobs in parallel using one or more computers")
+
+-- wget --no-check-certificate https://ftp.gnu.org/gnu/parallel/parallel-20230422.tar.bz2
+-- tar xf parallel-20230422.tar.bz2
+-- cd parallel-20230422
+-- ./configure --prefix=$DIR/apps/parallel/20230422
+-- make && make install
+#+end_src
+
+#+RESULTS: 20230422
+
+*** ripgrep
+
+#+name: 13.0.0-041544853c
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/BurntSushi/ripgrep")
+whatis("Description: A line-oriented search tool that recursively searches the current directory for a regex pattern")
+
+-- ml rust gcc
+-- cargo install --git https://github.com/BurntSushi/ripgrep --root $DIR/apps/ripgrep/13.0.0-041544853c/ --features 'pcre2'
+#+end_src
+
+*** xsv
+
+#+name: 2023-05-15
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/BurntSushi/xsv")
+whatis("Description: A fast CSV command line toolkit written in Rust.")
+
+-- ml rust
+-- cargo install --git https://github.com/BurntSushi/xsv.git  --root $DIR/apps/xsv/2023-05-15
+#+end_src
+
+*** gfastats
+
+#+name: 1.3.6
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+prereq("gcc/11.3.0")
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/vgl-hub/gfastats")
+whatis("Description: A single fast and exhaustive tool for summary statistics and simultaneous *fa* (fasta, fastq, gfa [.gz]) genome assembly file manipulation.")
+
+-- git clone https://github.com/vgl-hub/gfastats.git gfastats-repo --recursive
+-- cd gfastats-repo
+-- git checkout 941d8d5 # version 1.3.6
+-- make -j
+-- mkdir -p $DIR/apps/gfastats/1.3.6
+-- cp build/bin/gfastats $DIR/apps/gfastats/1.3.6/
+-- chmod +x $DIR/apps/gfastats/1.3.6/gfastats
+#+end_src
+
+*** seqtk
+
+#+name: 1.4
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL:https://github.com/lh3/seqtk")
+whatis("Description: Toolkit for processing sequences in FASTA/Q formats")
+
+-- wget --no-check-certificate https://github.com/lh3/seqtk/archive/refs/tags/v1.4.tar.gz
+-- tar xf v1.4.tar.gz
+-- cd seqtk-1.4
+-- mkdir -p $DIR/apps/seqtk/1.4
+-- make && make install BINDIR=$DIR/apps/seqtk/1.4/
+#+end_src
+
+*** hic-viz
+
+#+name: 20230602
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+prereq("gd/2.3.0")
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/IGBB/hic-viz/")
+whatis("Description: Simple hic contact plot from bam")
+
+-- ml gcc/11.3.0 gd/2.3.0
+-- INSTALL_DIR=$DIR/apps/install
+-- REPO=https://github.com/IGBB/hic-viz
+-- mkdir -p $INSTALL_DIR/; cd $INSTALL_DIR;
+-- git clone $REPO
+-- cd $(basename $REPO)
+-- git submodule update --init --recursive
+-- pushd src/htslib/
+-- autoheader && autoconf
+-- ./configure
+-- make lib-static
+-- popd
+-- make
+-- install -D hic-viz $DIR/apps/hic-viz/$(date '+%Y%m%d')/hic-viz
+#+end_src
+
+*** rust
+
+#+name: 1.71.1
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version,"bin")
+prepend_path("PATH", pkg)
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: languages")
+whatis("URL: https://www.rust-lang.org")
+whatis("Description: A language empowering everyone to build reliable and efficient software")
+
+-- curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+-- mkdir -p $HOME/apps/rust/
+-- mv $HOME/.cargo $DIR/apps/rust/1.71.0
+
+#+end_src
+
+*** samblaster
+
+#+name: 20230602
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+prereq("gcc")
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/GregoryFaust/samblaster")
+whatis("Description: a tool to mark duplicates and extract discordant and split reads from sam files")
+
+-- ml gcc/11.3.0
+-- INSTALL_DIR=$DIR/apps/install/
+-- REPO=https://github.com/GregoryFaust/samblaster
+-- mkdir -p $INSTALL_DIR/; cd $INSTALL_DIR;
+-- git clone $REPO
+-- cd $(basename $REPO)
+-- make
+-- install -D samblaster $DIR/apps/samblaster/$(date '+%Y%m%d')/samblaster
+#+end_src
+
+*** sambamba
+
+#+name: 1.0.1
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+prereq("gcc")
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/biod/sambamba")
+whatis("Description: Tools for working with SAM/BAM data")
+
+-- INSTALL_DIR=$DIR/apps/install/
+-- REPO=https://github.com/biod/sambamba
+-- mkdir -p $INSTALL_DIR/; cd $INSTALL_DIR;
+-- wget https://github.com/biod/sambamba/releases/download/v1.0.1/sambamba-1.0.1-linux-amd64-static.gz
+-- gunzip sambamba-1.0.1-linux-amd64-static.gz
+-- install -D sambamba-1.0.1-linux-amd64-static $DIR/apps/sambamba/1.0.1/sambamba
+#+end_src
+
+*** yahs
+
+#+name: 20230816
+#+begin_src lua
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(DIR,"apps",pkgName,version)
+prepend_path("PATH", pkg)
+prereq("gcc")
+
+whatis("Name: ".. pkgName)
+whatis("Version: " .. version)
+whatis("Category: tools")
+whatis("URL: https://github.com/c-zhou/yahs")
+whatis("Description: Yet another Hi-C scaffolding tool")
+
+-- ml gcc/11.3.0
+-- INSTALL_DIR=$DIR/apps/install/INSTALL_DIR=$DIR/apps/install/
+-- REPO=https://github.com/c-zhou/yahs
+-- mkdir -p $INSTALL_DIR/; cd $INSTALL_DIR;
+-- git clone $REPO
+-- cd $(basename $REPO)
+-- make
+-- install -D $(basename $REPO) $DIR/apps/$(basename $REPO)/$(date '+%Y%m%d')/$(basename $REPO)
+#+end_src
+
+** functions
+
+#+name: tool_paths
+| tool      | path                                                     |
+|-----------+----------------------------------------------------------|
+| bwa       | /apps/singularity-3/bwa/bwa-0.7.17.sif                   |
+| samtools  | /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif |
+| abyss-fac | DIR/apps/abyss_2.3.5--h41cdee2_1.sif                     |
+
+#+name: tools
+#+begin_src bash :var tools=tool_paths :results verbatim :cache yes
+ROOT=$(git rev-parse --show-toplevel)
+printf "ROOT=\$(git rev-parse --show-toplevel)\n"
+printf "module use \$ROOT/wgs/1-assembly/apps/modules/\n"
+printf "ml singularity\n\n"
+
+for tool in "${!tools[@]}"
+do
+    path=$(sed -e "s|DIR|$DIR|" <<< "${tools[$tool]}")
+    printf "$tool () { \n\tsingularity exec -B $ROOT $path $tool \"\$@\" \n}\n"
+    printf "export -f $tool\n\n"
+done
+
+printf "if [[ -z \"\$CPUS\" ]]; then\n"
+printf "    CPUS=1\n"
+printf "fi\n"
+printf "export ROOT\n"
+#+end_src
+
+* code :noexport:
+
+** general
+
+#+name: dotplot-kirkii-src
+#+begin_src shell
+ml minimap2/2.17 gcc/11.3.0 r/4.0.2
+mkdir -p $OUT; cd $OUT
+
+minimap2 -x asm5 \
+         -t $CPUS \
+         $DIR/0-ref/kirkii.fa \
+         $FASTA \
+         > $OUT/$(basename $OUT).kirkii.paf
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUT/$(basename $OUT).kirkii.paf \
+     -o $(basename $OUT).kirkii.nontargeted \
+     -m 20000 \
+     -p 12 \
+     -x -s -l
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUT/$(basename $OUT).kirkii.paf \
+     -o $(basename $OUT).kirkii \
+     -m 20000 \
+     -p 12 \
+     -x -s -t -l
+#+end_src
+
+
+#+name: extract-scaffolds-src
+#+begin_src shell
+ml extract
+for SCAFFOLD in $(cut -f1 $SOURCE | sort -V | uniq); do
+    mkdir -p $OUTDIR/$SCAFFOLD
+    OUT=$OUTDIR/$SCAFFOLD/$SCAFFOLD
+    awk -v SCAFFOLD=$SCAFFOLD '$1 == SCAFFOLD && $5 == "W" {gsub("+", "", $9); print $9$6":"$7"-"$8}' $SOURCE > $OUT.lst
+    extract -o $OUT.contigs.fasta $FASTA $OUT.lst
+    extract -o $OUT.fasta -m -g 100 $FASTA $OUT.lst
+done
+#+end_src
+** 1-contigs
+
+Create combined FASTQ file
+#+name: combine-long-reads-src
+#+begin_src shell :noweb yes
+for file in "${runs[@]}"; do
+    tar -Oxf $ROOT/wgs/0-raw/$file
+done | zcat -f > $WORKING/combined.fq
+#+end_#+begin_src
+
+#+end_src
+
+#+name: hifiasm
+#+begin_src shell :noweb yes
+PATH=$DIR/apps/hifiasm-0.18.5-r499/:$PATH
+
+COMBINED=$WORKING/combined.fq
+OUTPUT=$WORKING/genome
+HIC=($(ls -1 $RAW))
+
+hifiasm -t $CPUS -o $OUTPUT \
+    --h1 $RAW/${HIC[0]} \
+    --h2 $RAW/${HIC[1]} \
+    $COMBINED
+awk '/^S/{print ">"$2;print $3}' $OUTPUT.hic.p_ctg.gfa > $OUTPUT.hic.p_ctg.fa
+awk '/^S/{print ">"$2;print $3}' $OUTPUT.hic.hap1.p_ctg.gfa > $OUTPUT.hic.hap1.p_ctg.fa
+awk '/^S/{print ">"$2;print $3}' $OUTPUT.hic.hap2.p_ctg.gfa > $OUTPUT.hic.hap2.p_ctg.fa
+#+end_src
+
+** 2-polish
+
+#+name: medaka-polish-src
+#+begin_src shell
+export DIR ROOT OUTPUT
+
+ml singularity/3.8.3
+
+# clean up singularity medaka command. take the first element as subcommand,
+# then remove it from stack. Pass the remaining stack to medaka cmd.
+medaka () {
+    cmd=medaka_$1
+    shift;
+    singularity exec -B $ROOT $DIR/apps/medaka_v1.7.1.sif $cmd $@;
+}
+
+medaka consensus -t $CPUS -m r104_e81_sup_g5015 \
+       -i $DIR/$KOKIA/combined.fq \
+       -d $GENOME \
+       -o $OUTDIR
+#+end_src
+
+** 3-arrange
+
+
+#+name: ragtag
+#+begin_src shell
+ragtag () {
+    singularity exec --no-home -B $ROOT \
+                $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+                ragtag.py "$@"
+}
+#+end_src
+
+#+name: ragtag-scaffold
+#+begin_src shell :noweb yes
+<<ragtag>>
+for ref in A1 D5 AD1; do
+    ragtag scaffold -r -u -t $CPUS -q60 -i 0.75 \
+           -o $WORKING/$ref \
+           $DIR/0-ref/$ref.fa \
+           $FASTA
+done
+#+end_src
+
+#+name: ragtag-merge
+#+begin_src shell :noweb yes
+<<ragtag>>
+ragtag merge --gap-func mean -o $WORKING \
+       $FASTA \
+       $WORKING/{A1,D5,AD1}/ragtag.scaffold.agp
+#+end_src
+
+** 4-salsa
+
+#+name: setup-scaffolds
+#+begin_src shell
+ml samblaster
+set -euo pipefail
+OUTDIR=$WORKING
+RAW=$(realpath $DIR/../0-raw/)
+FASTA=$WORKING/../3-arrange/ragtag.merge.fasta
+export OUTDIR
+mkdir -p $OUTDIR
+cd $OUTDIR
+#+end_src
+
+#+name: index-genome
+#+begin_src shell :
+echo $(date +"%Y-%m-%d %T") "Indexing genome..." > $OUTDIR/log.txt
+set -x
+bwa index -a bwtsw $FASTA
+samtools faidx $FASTA
+set +x
+#+end_src
+
+#+name: align-hic
+#+begin_src shell
+echo $(date +"%Y-%m-%d %T") "Aligning hi-c data..." >> $OUTDIR/log.txt
+set -x
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+    bwa mem -5SP -t 48 $FASTA $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $OUTDIR/$name.bam
+done 2> $OUTDIR/samblaster.log
+set +x
+#+end_src
+
+#+name: samblaster-table
+#+begin_src shell :noweb yes
+<<setup-scaffolds>>
+grep samblaster $OUTDIR/samblaster.log |
+    tail -n 6 |
+    sed -e 's/samblaster: *//' |
+    head -n 4 |
+    sed -r -e 's/h ([UM])/h_\L\1/'
+#+end_src
+
+#+name: samblaster-text
+#+begin_src shell :noweb yes
+<<setup-scaffolds>>
+grep samblaster $OUTDIR/samblaster.log |
+    grep Marked |
+    sed -e 's/samblaster: *//' -r -e 's/  +/ /g'
+#+end_src
+
+#+name: bam-to-bed
+#+begin_src shell
+echo $(date +"%Y-%m-%d %T") "Creating BED file..." >> $OUTDIR/log.txt
+ml parallel
+set -x
+parallel --eta bedtools bamtobed \
+         -i $OUTDIR/{}.bam ::: \
+         "${!data[@]}" > $OUTDIR/alignments.bed
+set +x
+#+end_src
+
+#+name: run-salsa
+#+begin_src shell
+echo $(date +"%Y-%m-%d %T") "Running SALSA..." >> $OUTDIR/log.txt
+set -x
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+            run_pipeline.py \
+            -i 15 \
+            -a $FASTA \
+            -l $FASTA.fai \
+            -b $OUTDIR/alignments.bed \
+            -e GATC \
+            -s 590000000 \
+            -o $OUTDIR/salsa/ \
+            -p yes
+set +x
+#+end_src
+
+#+call: samblaster-table() :colnames '("Pair type" "Count" "%" "Duplicates" "%Dups/Type_ID_Count" "%Dups/All_Dups" "%Dups/All_IDs")
+
+#+RESULTS:
+| Pair type        |     Count |      % | Duplicates | %Dups/Type_ID_Count | %Dups/All_Dups | %Dups/All_IDs |
+|------------------+-----------+--------+------------+---------------------+----------------+---------------|
+| Both_unmapped    |   2272607 |  0.726 |          0 |                 0.0 |            0.0 |           0.0 |
+| Orphan/Singleton |   3269017 |  1.045 |     954857 |              29.209 |          0.582 |         0.305 |
+| Both_mapped      | 307366702 | 98.229 |  163207836 |              53.099 |         99.418 |        52.158 |
+| Total            | 312908326 |  100.0 |  164162693 |              52.464 |          100.0 |        52.464 |
+
+#+call: samblaster-text()
+
+#+RESULTS:
+: Marked 164162693 of 312908326 (52.464%) total read ids as duplicates using 2848792k memory in 37M25S(2245.037S) CPU seconds and 4H31M25S(16285S) wall time.
+
+** 5-hic-scaffold
+
+#+name: extract-scaffolds-parallel-src
+#+begin_src shell
+ml gcc/11.3.0 gfastats ripgrep seqtk parallel
+
+GRAPH=$WORKING/graph.gfa
+SALSA=$WORKING/../4-salsa/salsa/
+export GRAPH WORKING DIR SALSA
+
+extract_scaffold () {
+    local SCAFFOLD=$1
+
+    OUT=$WORKING/scaffolds/$SCAFFOLD/$SCAFFOLD
+    mkdir -p $WORKING/scaffolds/$SCAFFOLD
+
+    rg -w $SCAFFOLD $GRAPH |
+        cut -f3 |
+        tr ';' '\n' > $OUT.path
+
+    sed 's/[\+-]$//' $OUT.path > $OUT.lst
+    rg -f $OUT.lst $GRAPH > $OUT.gfa
+    sed -e 's/+$//' -re 's/([^\-]+)-/-\1/' $OUT.path > $OUT.arranged.lst
+
+    for LINE in $(cat $OUT.lst); do
+        FASTA=$(rg -w "^S.*$LINE" $GRAPH | cut -f3)
+        printf ">%s\n%s\n" $LINE $FASTA
+    done | seqtk seq -l80 > $OUT.fasta
+}
+
+export -f extract_scaffold
+
+gfastats $SALSA/assembly.cleaned.fasta -a $SALSA/scaffolds_FINAL.agp -o $GRAPH --sort descending
+parallel -j $CPUS --progress extract_scaffold ::: $(rg "^P" $GRAPH | cut -f2)
+#+end_src
+
+
+#+name: align-hic-to-fasta
+#+begin_src shell
+ml gcc/11.3.0 samblaster
+RAW=$(realpath $DIR/../0-raw/)
+OUTDIR=$WORKING/alignment/
+FASTA=$OUTDIR/scaffolds.fasta
+mkdir -p $OUTDIR/
+export FASTA
+
+# defined per species
+create_fasta
+
+bwa index -a bwtsw $FASTA
+samtools faidx $FASTA
+
+for NAME in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$NAME]}"
+    bwa mem -5SP -t $CPUS $FASTA $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316
+done 2> $OUTDIR/samblaster.log | samtools sort -o $OUTDIR/hic-alignment.bam
+samtools index $OUTDIR/hic-alignment.bam
+#+end_src
+
+#+name: yahs-scaffold-src
+#+begin_src shell
+ml gcc/11.3.0 yahs
+FASTA=$WORKING/alignment/scaffolds.fasta
+BAM=$WORKING/alignment/hic-alignment.bam
+
+mkdir -p $WORKING/yahs
+
+samtools faidx $FASTA
+yahs $FASTA $BAM -o $WORKING/yahs/yahs
+#+end_src
+
+** 6-curate
+
+#+name: merge-and-dotplot-scaffolds-src
+#+begin_src shell
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+
+mkdir -p $OUTDIR && cd $OUTDIR/
+
+fd -e fasta --glob "*contigs*" --search-path $SEARCH_DIR | sort -V | xargs cat > $OUTDIR/scaffolds.contigs.fasta
+
+minimap2 -x asm5 -t $CPUS \
+    $DIR/0-ref/kirkii.fa \
+    $OUTDIR/scaffolds.contigs.fasta \
+    > $OUTDIR/scaffolds.contigs.kirkii.paf
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUTDIR/scaffolds.contigs.kirkii.paf \
+     -o scaffolds.contigs.kirkii \
+     -m 20000 \
+     -p 12 \
+     -x -s -t -l
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUTDIR/scaffolds.contigs.kirkii.paf \
+     -o scaffolds.contigs.kirkii.unfiltered \
+     -m 0 \
+     -q 0 \
+     -p 12 \
+     -x -s -t -l
+#+end_src
+
+#+name: build-chromosome-src
+#+begin_src shell
+ml gcc/11.3.0 minimap2/2.17 r/4.0.2 ripgrep extract seqtk gd/2.3.0 hic-viz
+
+# make the output directory
+mkdir -p $OUTDIR; cd $OUTDIR
+KIRKII_CHR=$(sed -e 's/K./KI/' <<< "$CHROMOSOME")
+
+# use awk to find all contigs that map to the chromosome and use ripgrep
+# to find the names of scaffolds that contain those contigs
+rg -H --heading \
+    -f <(awk -v CHR=$KIRKII_CHR '$18 == CHR {print $1}' $ALIGNMENT.tsv | sort | uniq) \
+    $WORKING/scaffolds/scaffold_*/scaffold_*.lst |
+    rg scaffolds | sort -V > $OUTDIR/contained_in_scaffolds.lst
+
+# cat the list of scaffolds containing the files with contigs that mapped to
+# the chromosome, then cat those file to get all possible contigs
+# mapping to the chromosome
+cat $OUTDIR/contained_in_scaffolds.lst | xargs cat | sed '/^$/d' > $OUTDIR/scaffolds.lst
+
+# using the unfiltered alignments to kirkii, remove all contigs that don't
+# map to the chromosome
+# ripgrep fails without 'echo "DUMMY"'
+rg -w -v -f <(awk -v CHR=$KIRKII_CHR '$18 != CHR {print $1}' $ALIGNMENT.unfiltered.tsv |
+               sort |
+               uniq && echo "DUMMY") $OUTDIR/scaffolds.lst > $OUT.lst
+
+# extract the separate contigs and extract the gap-joined chromosome
+extract -o $OUT.contigs.fasta $FASTA $OUT.lst
+extract -m -c $CHROMOSOME -g 100 -o $OUT.fasta $FASTA $OUT.lst
+
+# align the chromosome to kirkii
+minimap2 -x asm5 -t $CPUS \
+    $DIR/0-ref/kirkii.fa \
+    $OUT.fasta \
+    > $OUT.kirkii.paf
+
+# dotplot the chromosome/kirkii alignment
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUT.kirkii.paf \
+     -o $CHROMOSOME.kirkii \
+     -m 0 \
+     -q 0 \
+     -p 12 \
+     -x -s -t -l
+
+# align the chromosome's contigs to kirkii
+minimap2 -x asm5 -t $CPUS \
+    $DIR/0-ref/kirkii.fa \
+    $OUT.contigs.fasta \
+    > $OUT.kirkii.contigs.paf
+
+# dotplot the chromosomal-contigs/kirkii alignment
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUT.kirkii.contigs.paf \
+     -o $CHROMOSOME.kirkii.contigs \
+     -m 0 \
+     -q 0 \
+     -p 12 \
+     -r $KIRKII_CHR \
+     -x -s -t -l
+#+end_src
+
+#+name: merge-and-dotplot-chromosomes-src
+#+begin_src shell
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+
+mkdir -p $OUTDIR && cd $OUTDIR/
+
+fd -e fasta --exclude "*contigs*" --search-path $SEARCH_DIR | sort -V | xargs cat > $OUTDIR/assembly.fasta
+
+minimap2 -x asm5 -t $CPUS \
+    $DIR/0-ref/kirkii.fa \
+    $OUTDIR/assembly.fasta \
+    > $OUTDIR/assembly.kirkii.paf
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUTDIR/assembly.kirkii.paf \
+     -o assembly.kirkii \
+     -m 20000 \
+     -p 12 \
+     -x -s -t -l
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUTDIR/assembly.kirkii.paf \
+     -o assembly.unfiltered \
+     -m 0 \
+     -q 0 \
+     -p 12 \
+     -x -s -t -l
+#+end_src
+
+#+name: contact-map-chromosomes-src
+#+begin_src shell
+ml gcc/11.3.0 parallel gd/2.3.0 hic-viz
+export WORKING LST
+
+hic_viz () {
+    local CHROMOSOME=$1
+    echo $CHROMOSOME
+    OUT=$WORKING/chromosomes/$CHROMOSOME/$CHROMOSOME
+    BAM=$WORKING/../5-hic-scaffold/alignment/hic-alignment.bam
+    LST=$OUT.lst
+    hic-viz -r $LST -o $OUT.contact.png $BAM
+    hic-viz -r $LST -o $OUT.contact.darker.png -m 5 $BAM
+    hic-viz -r $LST -s 500 -o $OUT.contact.small.png $BAM
+    hic-viz -r $LST -s 500 -o $OUT.contact.small.darker.png -m 5 $BAM
+}
+
+export -f hic_viz
+parallel -j $CPUS --progress hic_viz ::: $(ls -1d $WORKING/chromosomes/*/ | sort -V | xargs -i basename {})
+#+end_src
+
+#+name: contact-map-chromosome-curated-src
+#+begin_src shell
+ml gcc/11.3.0 gd/2.3.0 hic-viz
+export WORKING
+
+hic_viz () {
+    local CHROMOSOME=$1
+    echo $CHROMOSOME
+    OUT=$WORKING/chromosomes/$CHROMOSOME/$CHROMOSOME
+    BAM=$WORKING/../5-hic-scaffold/alignment/hic-alignment.bam
+    LST=$OUT.curated.lst
+    hic-viz -r $LST -o $OUT.contact.png $BAM
+    hic-viz -r $LST -o $OUT.contact.darker.png -m 5 $BAM
+    hic-viz -r $LST -s 1000 -o $OUT.contact.small.png $BAM
+    hic-viz -r $LST -s 1000 -o $OUT.contact.curated.small.darker.png -m 5 $BAM
+}
+
+export -f hic_viz
+hic_viz $1
+#+end_src
+
+#+name: extract-all-curated-fasta-src
+#+begin_src shell
+ml extract
+
+mkdir -p $OUTDIR
+cd $WORKING/
+for CHROMOSOME in "${CHROMOSOMES[@]}"; do
+    readarray -t libs <<< "${DATA[$CHROMOSOME]}"
+    OUT=$WORKING/chromosomes/$CHROMOSOME/$CHROMOSOME
+    if [[ "${libs[1]}" == "CURATED" ]]; then
+        extract -m -c $CHROMOSOME -g 100 -o $OUT.curated.fasta $FASTA $OUT.curated.lst
+        cat $OUT.curated.fasta
+    else
+        cat $OUT.fasta
+    fi
+done > $OUTDIR/assembly.fasta
+#+end_src
+
+#+name: merge-and-contact-map-assembly-src
+#+begin_src shell
+ml gcc/11.3.0 samblaster gd/2.3.0 hic-viz
+RAW=$(realpath $DIR/../0-raw/)
+
+mkdir -p $OUTDIR && cd $OUTDIR/
+
+bwa index -a bwtsw $FASTA
+samtools faidx $FASTA
+
+for NAME in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$NAME]}"
+    bwa mem -5SP -t $CPUS $FASTA $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316
+done 2> $OUTDIR/samblaster.log | samtools sort -o $OUTDIR/hic-alignment.bam
+samtools index $OUTDIR/hic-alignment.bam
+
+hic-viz -o $OUTDIR/assembly.contact.png $OUTDIR/hic-alignment.bam
+#+end_src
+
+#+name: dotplot-assembly-curated-src
+#+begin_src shell
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+
+cd $OUTDIR/
+
+minimap2 -x asm5 -t $CPUS \
+    $DIR/0-ref/kirkii.fa \
+    $OUTDIR/assembly.fasta \
+    > $OUTDIR/assembly.kirkii.paf
+
+Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUTDIR/assembly.kirkii.paf \
+     -o assembly.kirkii \
+     -m 20000 \
+     -p 12 \
+     -x -s -t -l
+#+end_src
+
+#+name: collect-unplaced-src
+#+begin_src shell
+ml ripgrep seqtk
+for CHR in $(ls -1d $WORKING/chromosomes/*/ | sort -V | xargs -i basename {}); do
+    cat chromosomes/$CHR/$CHR.lst;
+done | sed -e 's/^-//' | sort > $WORKING/used.lst
+cat scaffolds/scaffold_*/scaffold_*.lst | sed -e 's/^-//' | sort  | uniq > scaffolds.lst
+comm -3 used.lst scaffolds.lst | sed -re 's/^\s+//' > unused.lst
+rg -f unused.lst chromosomes/K*/K*.lst
+seqtk subseq -l80 dotplot_scaffolds/scaffolds.contigs.fasta unused.lst |
+    awk -v PREFIX=$PREFIX 'BEGIN {number=1}; $1 ~ /^>/ {print ">"PREFIX"_unplaced_"number++}; /^[^>]/ {print $0}' > $WORKING/assembly_curated/unplaced.fasta
+#+end_src
+
+* 0-ref
+
+#+name: download.sh
+#+begin_src shell
+URL=https://www.cottongen.org/cottongen_downloads
+wget -O - --no-check \
+    $URL/Gossypium_raimondii/BYU-Improved_G.raimondii/assembly/D5.v1.pred.fa.gz |
+    zcat > $DIR/0-ref/D5.fa
+wget -O - --no-check \
+    $URL/Gossypium_herbaceum/A1_USDA/assembly/A1.wagad.fasta.gz \
+    zcat > $DIR/0-ref/A1.fa
+wget -O - --no-check \
+    $URL/Gossypium_hirsutum/UTX-TM1_v2.1/assembly/Ghirsutum_527_v2.0.fa.gz |
+    zcat |
+    awk '/>scaffold/ { exit } 1;' > $DIR/0-ref/AD1.fa
+#+end_src
+
+* Kokia drynarioides JFW-HI
+
+#+name: assembly-stages-kd
+| Kokia_drynarioides_JFW-HI/1-contigs/canu.contigs.fasta                |
+| Kokia_drynarioides_JFW-HI/2-hic-scaffold/yahs/yahs_scaffolds_final.fa |
+| Kokia_drynarioides_JFW-HI/3-curate/assembly_curated/assembly.fasta    |
+
+#+call: abyss-summary(genome=(org-sbe genome-string (genomes assembly-stages-kd)))
+
+#+RESULTS:
+| name   | 1-contigs | 2-hic-scaffold | 3-curate |
+|--------+-----------+----------------+----------|
+| n      |      2365 |           1548 |       12 |
+| n:500  |      2365 |           1548 |       12 |
+| L50    |        89 |              5 |        6 |
+| min    |      1206 |           1000 |  35.77e6 |
+| N75    |    755687 |         37.1e6 |  38.09e6 |
+| N50    |   1659488 |        49.21e6 |  40.49e6 |
+| N25    |   3113363 |         78.8e6 |  48.17e6 |
+| E-size |   2550534 |        52.09e6 |  43.67e6 |
+| max    |   11.36e6 |        86.03e6 |  59.06e6 |
+| sum    |   552.8e6 |        552.8e6 |  511.8e6 |
+#+tblfm: @2$2..@>$>=$0;e4
+
+#+name: annex
+#+begin_src shell :var data=assembly-stages-kd
+for FILE in "${data[@]}"; do
+    FILE=$(echo $FILE | sed -e 's/Kokia_drynarioides_JFW-HI\///')
+    echo $FILE
+    gzip $FILE
+    git annex add $FILE.gz
+done
+#+end_src
+
+
+** 1-contigs
+
+Using the 'Nanopore flip-flop R9.4 or R10.3' settings because of the reduced
+error rate for the latest basecalling data.
+
+#+name: run-canu
+#+header: :var NANOPORE="kd/nanopore/"
+#+begin_src shell
+RAW=$(realpath $DIR/../0-raw/)
+PATH=$DIR/apps/canu-2.2/bin:$PATH
+
+canu \
+    -p canu -d $WORKING \
+    genomeSize=590m \
+    gridOptions="-Acotton_genomics" \
+    useGrid=true \
+    corMhapOptions='--threshold 0.8 --ordered-sketch-size 1000 --ordered-kmer-size 14' \
+    correctedErrorRate=0.105 \
+    -nanopore $RAW/$NANOPORE/*/sup.pass.fq.gz
+#+end_src
+
+Clean canu directory
+
+#+begin_src sh
+pushd $WORKING
+rm -fr canu-logs/ \
+    canu-scripts/ \
+    canu.seqStore/ \
+    correction/ \
+    trimming/ \
+    unitigging/ \
+    canu.out
+
+gzip *.fasta canu.contigs.layout.*
+
+git add canu.report canu.seqStore.err
+
+git annex add canu.contigs.fasta.gz \
+    canu.contigs.layout.readToTig.gz \
+    canu.contigs.layout.tigInfo.gz \
+    canu.correctedReads.fasta.gz \
+    canu.trimmedReads.fasta.gz \
+    canu.unassembled.fasta.gz
+#+end_src
+** 2-hic-scaffold
+
+#+name: align-hic-to-fasta
+#+header: :var data=../0-raw/readme.org:kd-hic
+#+header: :var CPUS=24
+#+begin_src shell :noweb yes
+create_fasta () {
+    zcat $WORKING/../1-contigs/canu.contigs.fasta.gz > $FASTA
+}
+
+<<align-hic-to-fasta>>
+#+end_src
+
+#+name: yahs-scaffold
+#+begin_src shell :noweb yes
+<<yahs-scaffold-src>>
+#+end_src
+
+#+name: dotplot-kirkii
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUT=$WORKING/yahs
+FASTA=$OUT/yahs_scaffolds_final.fa
+<<dotplot-kirkii-src>>
+#+end_src
+
+** 3-curate
+
+#+name: chromosome-curation-kd
+| CHR    | STATUS | USE      |
+|--------+--------+----------|
+| Kd_01  | DONE   | ORIGINAL |
+| Kd_2_4 | DONE   | CURATED  |
+| Kd_03  | DONE   | CURATED  |
+| Kd_05  | DONE   | CURATED  |
+| Kd_06  | DONE   | ORIGINAL |
+| Kd_07  | DONE   | CURATED  |
+| Kd_08  | DONE   | ORIGINAL |
+| Kd_09  | DONE   | ORIGINAL |
+| Kd_10  | DONE   | ORIGINAL |
+| Kd_11  | DONE   | ORIGINAL |
+| Kd_12  | DONE   | ORIGINAL |
+| Kd_13  | DONE   | ORIGINAL |
+
+#+name: extract-scaffolds
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/scaffolds/
+SOURCE=$(realpath $WORKING/../5-hic-scaffold/yahs/yahs_scaffolds_final.agp)
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+<<extract-scaffolds-src>>
+#+end_src
+
+#+name: merge-and-dotplot-scaffolds
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/scaffolds/
+OUTDIR=$WORKING/dotplot_scaffolds/
+<<merge-and-dotplot-scaffolds-src>>
+#+end_src
+
+#+name: build-all-chromosomes
+#+header: :var CPUS=48
+#+header: :var CHROMOSOMES=chromosome-curation-kd[,0]
+#+begin_src shell
+cd $WORKING/
+for CHROMOSOME in ${CHROMOSOMES[@]}; do
+    echo $CHROMOSOME
+    mkdir -p $WORKING/chromosomes/$CHROMOSOME/
+    $WORKING/build-chromosome.sh $CHROMOSOME &> $WORKING/chromosomes/$CHROMOSOME/build.log
+done;
+#+end_src
+
+#+name: build-chromosome
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+CHROMOSOME=$1
+OUTDIR=$WORKING/chromosomes/$CHROMOSOME/
+OUT=$OUTDIR/$CHROMOSOME
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+ALIGNMENT=$WORKING/dotplot_scaffolds/scaffolds.contigs.kirkii
+<<build-chromosome-src>>
+#+end_src
+
+#+name: contact-map-chromosomes
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+<<contact-map-chromosomes-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly
+#+header: :var CPUS=24
+#+header: :var data=../0-raw/readme.org:kd-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/chromosomes/
+OUTDIR=$WORKING/assembly/
+FASTA=$OUTDIR/assembly.fasta
+
+fd -e fasta --exclude "*contigs*" --exclude "*curated*" --search-path $SEARCH_DIR | sort -V | xargs cat > $FASTA
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+#+name: contact-map-chromosome
+#+begin_src shell :noweb yes
+<<contact-map-chromosome-curated-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly-curated
+#+header: :var CHROMOSOMES=chromosome-curation-kd[,0]
+#+header: :var DATA=chromosome-curation-kd
+#+header: :var CPUS=48
+#+header: :var data=../0-raw/readme.org:kd-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+OUTDIR=$WORKING/assembly_curated/
+FASTA=$OUTDIR/assembly.fasta
+
+<<extract-all-curated-fasta-src>>
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+#+name: dotplot-assembly-curated
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/assembly_curated/
+<<dotplot-assembly-curated-src>>
+#+end_src
+
+#+name: collect-unplaced
+#+begin_src shell :noweb yes :var PREFIX="Kd"
+<<collect-unplaced-src>>
+#+end_src
+
+*** chromosomes
+
+**** Kd_2_4
+
+#+name: Kd_2_4.curated
+#+begin_src lst
+tig00001673:1-365764
+tig00002428:1-29860
+tig00002430:1-22079
+tig00001674:1-1149000
+tig00001675:1-2443724
+tig00001676:1-3791738
+tig00001188:1-32371
+tig00001190:1-53933
+-tig00000219:1-2066164
+-tig00001505:1-127830
+-tig00001504:1-196320
+tig00002033:1-1110403
+tig00002036:1-211381
+-tig00002600:1-91460
+-tig00002596:1-80863
+tig00002008:1-97078
+tig00002009:1-377630
+-tig00001334:1-1408812
+-tig00001333:1-1015554
+tig00001910:1-1194870
+-tig00002457:1-23113
+tig00002456:1-27893
+tig00001912:1-66670
+tig00001913:1-1042487
+-tig00001808:1-479871
+tig00001207:1-2003796
+tig00001208:1-21608
+tig00000377:1-20450
+tig00001211:1-1285281
+tig00000319:1-29019
+tig00001503:1-967763
+tig00000210:1-139391
+-tig00001692:1-61834
+tig00001209:1-23431
+tig00000200:1-47105
+-tig00000576:1-42174
+-tig00001963:1-109427
+tig00001895:1-48680
+tig00001512:1-3062029
+tig00001470:1-873766
+tig00001455:1-364309
+-tig00001311:1-21916
+-tig00001310:1-202328
+-tig00001459:1-619113
+tig00001493:1-440813
+-tig00001806:1-288228
+tig00000094:1-3544439
+-tig00001351:1-1811814
+tig00000095:1-30169
+-tig00001350:1-36674
+tig00001349:1-23986
+tig00002274:1-1889216
+tig00000648:1-512983
+-tig00002476:1-59556
+-tig00002473:1-44783
+-tig00002472:1-1073179
+-tig00001894:1-38552
+-tig00001507:1-26880
+tig00001508:1-31304
+tig00001897:1-27867
+tig00001893:1-26904
+tig00001511:1-25770
+tig00000290:1-23088
+-tig00000305:1-372693
+#+end_src
+
+**** Kd_03
+
+#+name: Kd_03.curated
+#+begin_src lst
+-tig00001719:1-116951
+tig00001718:1-28271
+-tig00001717:1-6640527
+tig00002003:1-101183
+-tig00001121:1-2993255
+tig00002234:1-39033
+tig00001092:1-351634
+tig00001093:1-514007
+-tig00001187:1-615981
+tig00001463:1-1679257
+-tig00001323:1-2670363
+tig00000206:1-485060
+-tig00001192:1-117904
+tig00000041:1-24733
+-tig00001191:1-1416940
+-tig00001733:78001-2028970
+-tig00002037:1960001-2046648
+-tig00001733:1-78000
+-tig00002233:1-1098142
+-tig00002232:1-44640
+-tig00002231:1-50602
+-tig00002042:1-43441
+-tig00002041:1-25434
+-tig00002037:1-1960000
+tig00001667:1-708142
+tig00001668:1-2273455
+tig00001670:1-506892
+tig00001560:1-495508
+-tig00001577:1-377295
+-tig00001575:1-491151
+tig00000165:1-26360
+-tig00001574:1-677596
+-tig00001566:1001-51837
+-tig00001572:1-31195
+-tig00001565:1-90599
+-tig00000158:1-84278
+-tig00001564:1-1512289
+-tig00000163:1-21000
+-tig00001563:1-329961
+-tig00001562:1-1728585
+tig00001147:1-255518
+tig00001148:1-52725
+tig00001149:1-875148
+tig00001870:1-46487
+tig00001964:1-2538993
+-tig00000568:1-38686
+tig00001971:1-286177
+tig00001972:1-704000
+tig00000600:1-27380
+tig00000745:1-43917
+tig00001974:1-397754
+-tig00002536:1-74300
+-tig00001975:1-25429
+tig00000598:1-29722
+tig00000599:1-21492
+-tig00002535:1-109270
+-tig00002534:1-45923
+-tig00002324:1-240635
+-tig00002662:1-25113
+-tig00002668:1-67207
+tig00002333:1-29786
+-tig00002337:1-44886
+tig00002667:1-42815
+tig00002661:1-94963
+-tig00002322:1-189295
+tig00001402:1-403401
+-tig00002387:1-1239989
+#+end_src
+
+**** Kd_05
+
+#+name: Kd_05.curated
+#+begin_src lst
+-tig00001085:1-208005
+-tig00001084:1-9092140
+-tig00001096:1-11357382
+tig00000049:1-32475
+-tig00001095:1-461640
+tig00001232:1-598987
+-tig00000223:1-1247765
+-tig00001726:1-373155
+tig00000575:1-25187
+tig00001724:1-32531
+-tig00002414:1-38483
+tig00001725:1-21845
+-tig00001723:1-693437
+-tig00001931:1-141355
+-tig00001930:1-134863
+-tig00001117:1-234735
+tig00000096:1-938685
+-tig00001684:1-62082
+tig00001682:1-28628
+-tig00000952:1-56949
+-tig00002435:1-316171
+-tig00001114:1-1016326
+-tig00000603:1-69592
+tig00000351:1-1707174
+tig00000207:1-1077882
+-tig00001458:1-1287136
+-tig00001457:1-52419
+tig00001608:1-299611
+tig00001610:1-1658592
+tig00001612:1-47536
+tig00001613:1-737976
+tig00001687:1-550232
+tig00001688:1-449107
+-tig00002072:1-80703
+-tig00002272:1-495027
+tig00000506:1-94639
+tig00002437:1-295352
+-tig00000633:1-74478
+tig00002438:1-44922
+tig00002897:1-28192
+tig00002898:1-26661
+tig00002439:1-113411
+tig00002511:40001-162435
+-tig00000653:1-25484
+-tig00002515:1-92732
+-tig00002512:1-27439
+-tig00002551:1-25784
+-tig00000655:1-38398
+-tig00002338:1-1568945
+tig00002309:1-23854
+tig00002310:1-694991
+tig00002444:1-448750
+-tig00001615:1-186526
+-tig00001614:1-20414
+tig00002570:1-561923
+tig00002571:1-54828
+-tig00000800:1-183259
+-tig00001250:1-69747
+-tig00002841:1-31341
+-tig00001249:1-80676
+-tig00001248:1-116665
+tig00001259:1-71572
+-tig00000553:1-133119
+tig00001260:1-312922
+tig00001262:1-193757
+tig00002053:1-1084000
+tig00002212:1-53451
+tig00002055:1-67223
+tig00000005:1-1338162
+tig00001481:1-75246
+tig00001483:1-262859
+tig00001486:1-100046
+-tig00000626:1-877820
+-tig00002423:1-404167
+tig00002299:1-1388310
+-tig00002482:1-51105
+tig00002303:1-40855
+tig00000639:1-49556
+tig00000643:1-43556
+tig00002304:1-797183
+tig00002872:1-43393
+tig00002178:1-56698
+-tig00000517:1-45536
+#+end_src
+
+**** Kd_06
+
+#+name: Kd_06.curated
+#+begin_src lst
+tig00001467:45001-5299048
+tig00001468:1-3301855
+-tig00001703:43001-1354322
+-tig00001703:1-43000
+-tig00001702:1-599376
+-tig00001701:1-1840323
+-tig00000710:1-329830
+-tig00000322:1-109235
+-tig00001959:1-1119777
+-tig00001958:1-1553863
+-tig00000386:1-31095
+-tig00001957:1-1884199
+tig00001955:1-59854
+tig00002031:2001-26500
+tig00002032:1-265890
+tig00001820:1-126979
+tig00001821:1-3113363
+tig00001540:1-260953
+-tig00001319:1-1659488
+-tig00000123:1-324024
+tig00001466:1-106521
+-tig00001465:1-1415323
+-tig00001464:1-1111338
+-tig00001401:1-583839
+tig00002081:1-1424602
+tig00000261:1-1881333
+-tig00001558:1-295085
+-tig00001779:1-3134516
+-tig00001777:1-1199290
+-tig00001774:1-1794545
+-tig00001773:1001-56827
+tig00002130:1-830633
+tig00002131:1-329371
+tig00002179:1-1966221
+tig00000773:1-23986
+-tig00002162:1-20328
+tig00001830:1-170880
+tig00001831:1-1953921
+-tig00001834:1-24821
+tig00001835:1-2597876
+-tig00001371:1-567456
+-tig00001369:1001-32664
+-tig00001367:1-74087
+tig00000265:4001-37581
+tig00000264:1001-41975
+tig00001690:1-508124
+tig00001691:1-62595
+-tig00001076:1-977757
+tig00001212:1-805671
+tig00001214:1-1566738
+tig00000089:1-1040801
+tig00000090:1-1249455
+-tig00001291:1-20166
+tig00001294:1-41244
+-tig00001289:1-50785
+-tig00000236:1-1803783
+tig00001689:1-256475
+tig00000107:1-804996
+-tig00001790:28001-4351308
+tig00001790:1-28000
+-tig00001789:1-634979
+#+end_src
+
+**** Kd_07
+
+#+name: Kd_07.curated
+#+begin_src lst
+-tig00002688:1-83287
+tig00002690:1-27529
+tig00002709:1-24304
+tig00002702:1-49329
+tig00002689:1-48094
+tig00002851:1-42280
+tig00001267:1-10412283
+tig00001269:1-42046
+tig00001119:1-416150
+tig00001120:1-2129267
+-tig00001098:1-656303
+-tig00000018:1-790617
+-tig00001169:1-31775
+-tig00001167:1-2306762
+tig00000725:2001-55680
+-tig00001165:1-26074
+tig00001160:1-25070
+-tig00000795:1-27158
+-tig00001163:1-124211
+tig00000782:1-38468
+-tig00001162:1-49853
+-tig00001090:1-2140862
+tig00001315:1-106208
+tig00001501:1-174533
+tig00001316:1-4531560
+tig00001847:1-278525
+tig00001848:1-85469
+tig00001890:1-31097
+-tig00001855:1-20838
+-tig00001884:1-21864
+tig00002830:1-32970
+tig00001859:1-28478
+-tig00001849:1-109731
+tig00001857:1-135476
+tig00000459:1-2368341
+tig00001346:1-43718
+tig00001348:1-970224
+tig00001345:1-24249
+-tig00001344:1-532775
+tig00001116:1-1124284
+-tig00001880:1-430791
+-tig00001877:1-2804222
+-tig00002060:1-3780165
+#+end_src
+
+**** Kd_08
+
+#+name: Kd_08.curated
+#+begin_src lst
+tig00001943:1-275031
+-tig00000803:1-22972
+-tig00001944:1-30046
+tig00001945:1-3167614
+tig00000584:1-40677
+tig00001946:1-1184683
+-tig00001766:1-308701
+tig00000641:1-23278
+-tig00001765:1-262713
+-tig00002377:1-827119
+tig00000956:1-24584
+tig00002375:1-23549
+tig00002460:1-354529
+tig00002461:1-23163
+tig00000619:1-487995
+tig00001110:1-2268823
+-tig00000024:1-27589
+tig00001111:1-205856
+tig00001100:1-1244948
+tig00001101:1-1210836
+-tig00001113:1-46463
+-tig00000010:1-25316
+tig00001105:1-483221
+tig00001308:1-208715
+-tig00000129:1-570332
+-tig00001139:1-1868906
+-tig00001138:1-1615284
+-tig00001137:1-35530
+-tig00001136:1-273063
+tig00001277:1-1254783
+tig00001278:1-487706
+tig00001279:1-3550300
+-tig00001764:1-168840
+tig00000628:1-66383
+-tig00001763:1-159881
+tig00002311:1-657903
+tig00000680:1-36649
+tig00002312:6001-91220
+tig00002319:1-583482
+-tig00002298:1-22172
+-tig00002295:1-157751
+-tig00001203:1-319763
+-tig00000038:1-260233
+tig00001073:1-2127356
+tig00001698:1-321554
+tig00000211:1-221983
+tig00001824:1-723853
+-tig00001732:1-69081
+-tig00001705:1-883079
+-tig00000306:1-1063955
+tig00002197:1-602060
+tig00002200:1-1292104
+-tig00001947:1-24225
+tig00000743:1-138584
+tig00000859:1-89092
+tig00002208:1-58930
+tig00000887:1-62384
+tig00002211:1-821524
+-tig00001991:1-1996921
+-tig00001989:89001-2496000
+tig00000496:1-142026
+tig00002261:1-41000
+tig00002261:41001-1964268
+-tig00002262:1-39511
+tig00000794:1-251526
+
+#+end_src
+
+**** Kd_12
+
+#+name: Kd_12.curated
+#+begin_src lst
+tig00000204:1-3439282
+tig00001460:1-1092520
+tig00001419:1-8063008
+-tig00001288:1-694512
+-tig00001286:1-2048125
+-tig00000344:1-618593
+-tig00001276:1-52746
+tig00001618:1-748577
+tig00001622:1-932811
+-tig00001627:1-28530
+tig00001629:1-47888
+-tig00001539:1-795077
+-tig00001132:1-2224377
+tig00001478:1-565145
+tig00001274:1-102178
+-tig00001127:1-4080051
+tig00001126:1-27445
+tig00000074:1-479831
+tig00001340:1-1257848
+tig00001341:1-242000
+-tig00001537:1-2180983
+-tig00001536:1-62984
+-tig00001534:1-22720
+-tig00001842:1-230270
+-tig00001841:1-1255820
+tig00000433:1-46070
+-tig00001840:1-1234904
+-tig00002109:1-615868
+-tig00002105:1-22449
+tig00002103:1-43623
+-tig00000820:1-28162
+tig00001513:1-546136
+-tig00000139:1-31488
+tig00000491:1-152702
+-tig00000146:1-1062954
+tig00000138:1-38225
+tig00001515:1-63375
+tig00000144:1-58289
+-tig00001517:1-326555
+-tig00001516:1-162151
+tig00000750:1-151388
+-tig00002643:1-88978
+-tig00002642:1-38350
+-tig00002641:1-486087
+-tig00000747:1-44314
+tig00002666:1-72572
+-tig00002664:1-395966
+tig00002728:1-75701
+tig00002731:1-59759
+-tig00002403:1-53718
+-tig00002402:1-1458537
+tig00002192:1-1023343
+-tig00001295:1-782905
+-tig00001135:1-1500644
+-tig00001134:1-212165
+#+end_src
+
+**** Kd_13
+
+#+name: Kd_13.curated
+#+begin_src lst
+tig00002193:1-1410802
+tig00002195:1-1531000
+-tig00002554:34001-745598
+-tig00002098:1-2456426
+-tig00001332:1-7146943
+-tig00001331:1-174712
+tig00001767:1-669434
+-tig00000606:1-87694
+tig00001769:1-116733
+tig00001771:1-41000
+tig00001771:41001-817689
+-tig00001642:1-299401
+-tig00001641:1-1157137
+tig00001837:1-825782
+-tig00000582:1-26149
+tig00002097:1-605705
+tig00001395:1-247036
+tig00001397:1-99346
+-tig00000625:1-21027
+tig00002189:1-1483738
+tig00002083:1-1663860
+tig00002084:5001-50507
+-tig00002263:1-1510447
+tig00000199:1-602843
+tig00000172:1-543676
+tig00001175:1-465700
+tig00001530:1-1087583
+-tig00001929:1-990582
+tig00000461:1-72137
+-tig00001923:1-755687
+tig00001568:1-285996
+-tig00000162:1-359934
+-tig00002443:1-1005393
+-tig00001382:1-274159
+-tig00001374:1-518809
+tig00001223:1-1950071
+tig00001226:1-154760
+tig00001280:1-3744000
+tig00000379:1-2122000
+tig00001761:1-77995
+tig00001758:1-52742
+tig00002365:1-30104
+#+end_src
+
+** deprecated
+*** Contigs
+- Remove lambda and remove reads shorter than 4kb from nanopore data
+  #+header: :var runs=../0-raw/readme.org:kd-nanopore-runs[,1]
+  #+begin_src sh :tangle kd/1-trim.sh
+RAW=$(realpath $DIR/../0-raw/)
+
+printf "$RAW/%s/fastq_pass.fq.gz\n" "${runs[@]}" |
+    xargs $DIR/apps/devour -t 20 -l 4000 |
+    gzip > kd/clean.fq.gz
+  #+end_src
+- Assemble contigs using canu
+  #+begin_src sh :tangle kd/2-canu.sh
+ml canu/2.1
+canu \
+    -p canu -d $DIR/kd \
+    genomeSize=590m \
+    gridOptions="-A191400-327070 --time=48:00:00" \
+    useGrid=true \
+    -nanopore $DIR/kd/clean.fq.gz
+
+
+  #+end_src
+
+  |        | canu/2.1 |
+  |--------+----------|
+  | n      |     2264 |
+  | n:500  |     2264 |
+  | L50    |       54 |
+  | min    |     1197 |
+  | N75    |  1201645 |
+  | N50    |  2757100 |
+  | N25    |  4885516 |
+  | E-size |  4190213 |
+  | max    |  22.95e6 |
+  | sum    |  551.1e6 |
+- clean canu directory
+  #+begin_src sh
+pushd $DIR/kd
+rm -fr canu-logs/ \
+    canu-scripts/ \
+    canu.seqStore/ \
+    correction/ \
+    trimming/ \
+    unitigging/ \
+    canu.out
+
+gzip *.fasta canu.contigs.layout.*
+
+git add canu.report canu.seqStore.err
+
+git annex add canu.contigs.fasta.gz \
+    canu.contigs.layout.readToTig.gz \
+    canu.contigs.layout.tigInfo.gz \
+    canu.correctedReads.fasta.gz \
+    canu.trimmedReads.fasta.gz \
+    canu.unassembled.fasta.gz
+
+#+end_src
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.2
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta \
+    > $DIR/kd/canu.kirkii.paf
+
+cd $DIR/kd
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i canu.kirkii.paf \
+    -o canu.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+
+*** Hi-C Scaffolding
+- Create bwa database for assembly
+  #+begin_src sh :tangle kd/2-hic/0-ref/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+
+bwa index -a bwtsw -p $DIR/kd/2-hic/0-ref/kd.bwa $DIR/kd/canu.contigs.fasta
+samtools faidx $DIR/kd/canu.contigs.fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=../0-raw/readme.org:kd-hic
+  #+begin_src sh :tangle kd/2-hic/1-bwa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $DIR/../0-raw/)
+
+ml singularity/3.7.3
+bwa () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bwa/bwa-0.7.17.sif bwa $@
+}
+samtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
+        samtools $@
+}
+PATH=$PATH:$DIR/apps/samblaster
+
+for name in "${!data[@]}"; do
+    readarray -t libs <<< "${data[$name]}"
+
+    bwa mem -5SP -t 24 $DIR/kd/2-hic/0-ref/kd.bwa $RAW/${libs[0]} $RAW/${libs[1]} |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kd/2-hic/1-bwa/$name.bam
+done
+
+  #+end_src
+
+- Validate libraries
+  #+header: :var data=../0-raw/readme.org:kd-hic
+  #+begin_src sh :tangle 2-hic/2-qc/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml python/3.9.2
+export PYTHONPATH=$PYTHONPATH:~/.local/lib/python3.9/site-packages/
+source $DIR/apps/hic_qc/bin/activate
+
+for name in "${!data[@]}"; do
+    $DIR/apps/hic_qc/hic_qc.py \
+        -b $DIR/2-hic/1-bwa/$name.bam \
+        -o $DIR/2-hic/2-qc/$name \
+        --lib_enzyme GATC
+done
+
+  #+end_src
+
+- Convert bams to single bed
+  #+header: :var data=../0-raw/readme.org:kd-hic[,0]
+  #+begin_src sh :tangle kd/2-hic/3-convert.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+bedtools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bedtools/bedtools-2.28.0.sif bedtools $@
+}
+
+export ROOT DIR
+export -f bedtools
+
+parallel --eta bedtools bamtobed -i $DIR/kd/2-hic/1-bwa/{}.bam \
+    ::: "${data[@]}" > $DIR/kd/2-hic/3-alignments.bed
+  #+end_src
+- Run SALSA
+  #+begin_src sh :tangle kd/2-hic/4-salsa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+
+singularity exec -B $ROOT $DIR/apps/salsa2_2.3--py27h16ec135_1.sif \
+    run_pipeline.py \
+    -i 15 \
+    -a $DIR/kd/canu.contigs.fasta \
+    -l $DIR/kd/canu.contigs.fasta.fai \
+    -b $DIR/kd/2-hic/3-alignments.bed \
+    -e GATC \
+    -s 590000000 \
+    -o $DIR/kd/2-hic/4-salsa/ \
+    -p yes
+  #+end_src
+
+  #+begin_src sh :tangle kd/2-hic/4-salsa/stat.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity/3.7.3
+
+singularity exec -B $ROOT \
+    /apps/singularity-3/abyss/abyss-v2.1.5-7-deb_cv1.sif \
+    /usr/lib/abyss/abyss-fac \
+    $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_*.fasta \
+    $DIR/kd/2-hic/4-salsa/scaffolds_FINAL.fasta
+
+
+  #+end_src
+
+  #+RESULTS:
+  |    n | n:500 | L50 |  min |     N75 |     N50 |     N25 |  E-size |        max |         sum |  name |
+  | 1832 |  1832 |  48 | 1197 | 1337726 | 3293652 | 5573229 | 4604924 | 22950000.0 | 551100000.0 |     1 |
+  | 1663 |  1663 |  46 | 1197 | 1455819 | 3362451 | 6249823 | 4727382 | 22950000.0 | 551100000.0 |     2 |
+  | 1596 |  1596 |  45 | 1197 | 1680764 | 3702737 | 6262271 | 4841897 | 22950000.0 | 551100000.0 |     3 |
+  | 1571 |  1571 |  43 | 1197 | 1722624 | 3786187 | 6299587 | 4959276 | 22950000.0 | 551100000.0 |     4 |
+  | 1596 |  1596 |  45 | 1197 | 1680764 | 3702737 | 6262271 | 4841897 | 22950000.0 | 551100000.0 | FINAL |
+
+
+- dotplot against kirkii
+
+  #+begin_src sh
+ml minimap2/2.17 r/4.0.25
+
+cd $DIR/kd/
+
+minimap2 -x asm5 -t 20 \
+    $DIR/0-ref/kirkii.fa $DIR/kd/2-hic/4-salsa/scaffolds_ITERATION_4.fasta \
+    > $DIR/kd/hic.kirkii.paf
+
+Rscript $DIR/apps/dotplots/pafCoordsDotPlotly.R -i $DIR/kd/hic.kirkii.paf \
+    -o hic.kirkii -m 20000 -x -s -t -l -p 12
+  #+end_src
+*** Arrange/Orient
+- Orient and arrange using /Gossipiodes kirkii/
+  #+begin_src sh :tangle kd/3-ragtag/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+ragtag () {
+    singularity exec --no-home -B$ROOT \
+        $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+        ragtag.py "$@"
+
+}
+
+ragtag scaffold -u -t 48 -q 60 -o $DIR/kd/3-ragtag/ -i 0.75  \
+    $DIR/0-ref/kirkii.fa $DIR/kd/canu.contigs.fasta
+  #+end_src
+
+* Kokia kauaiensis S9
+
+#+name: assembly-stages-kk
+| Kokia_kauaiensis_S9/1-contigs/genome.hic.p_ctg.fa               |
+| Kokia_kauaiensis_S9/2-polish/consensus.fasta                    |
+| Kokia_kauaiensis_S9/3-arrange/ragtag.merge.fasta                |
+| Kokia_kauaiensis_S9/4-salsa/salsa/scaffolds_FINAL.fasta         |
+| Kokia_kauaiensis_S9/5-hic-scaffold/yahs/yahs_scaffolds_final.fa |
+| Kokia_kauaiensis_S9/6-curate/assembly_curated/assembly.fasta    |
+
+#+call: abyss-summary(genome=(org-sbe genome-string (genomes assembly-stages-kk)))
+
+#+RESULTS:
+| name   | 1-contigs | 2-polish | 3-arrange | 4-salsa | 5-hic-scaffold | 6-curate |
+|--------+-----------+----------+-----------+---------+----------------+----------|
+| n      |      1990 |     1990 |      1698 |    1313 |           1448 |       12 |
+| n:500  |      1990 |     1990 |      1698 |    1313 |           1444 |       12 |
+| L50    |       111 |      111 |        51 |       7 |              5 |        6 |
+| min    |      2530 |     2529 |      2529 |    2529 |            597 |  36.81e6 |
+| N75    |    776382 |   776726 |   2067120 | 8961706 |        39.44e6 |  40.22e6 |
+| N50    |   1538110 |  1538567 |   3511082 | 24.34e6 |        41.43e6 |  40.62e6 |
+| N25    |   2565855 |  2567210 |   5229284 | 42.28e6 |         48.6e6 |  50.85e6 |
+| E-size |   1828249 |  1828802 |   4279582 | 30.12e6 |        51.76e6 |  44.86e6 |
+| max    |   7124001 |  7124643 |   18.33e6 | 83.08e6 |        106.9e6 |  59.28e6 |
+| sum    |   556.6e6 |  556.7e6 |   556.7e6 | 556.7e6 |        556.7e6 |  527.2e6 |
+#+tblfm: @2$2..@>$>=$0;e4
+
+#+name: annex
+#+begin_src shell :var data=assembly-stages-kk
+for FILE in "${data[@]}"; do
+    FILE=$(echo $FILE | sed -e 's/Kokia_kauaiensis_S9\///')
+    echo $FILE
+    gzip $FILE
+    git annex add $FILE.gz
+done
+#+end_src
+
+** 1-contigs
+
+#+name: combine-long-reads
+#+header: :var runs=../0-raw/readme.org:kk-nanopore-sup[,1]
+#+begin_src shell :noweb yes
+<<combined-long-reads-src>>
+#+end_src
+
+#+name: assemble
+#+header: :var CPUS=24
+#+begin_src shell :noweb yes
+RAW=$ROOT/wgs/0-raw/kk/hi-c
+<<hifiasm>>
+#+end_src
+
+** 2-polish
+
+#+name: polish
+#+header: :var CPUS=12
+#+begin_src shell :noweb yes
+GENOME=$WORKING/../1-contigs/genome.hic.p_ctg.fa
+<<medaka-polish>>
+#+end_src
+
+** 3-arrange
+
+#+name: ragtag
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+FASTA=$WORKING/../2-polish/consensus.fasta
+<<ragtag-scaffold>>
+<<ragtag-merge>>
+#+end_src
+
+** 4-salsa
+
+#+name: salsa
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+<<setup-scaffolds>>
+<<index-genome>>
+<<align-hic>>
+<<bam-to-bed>>
+<<run-salsa>>
+#+end_src
+
+** 5-hic-scaffold
+
+#+name: align-hic-to-fasta
+#+header: :var data=../0-raw/readme.org:kk-hic
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+create_fasta () {
+    <<extract-scaffolds-parallel-src>>
+}
+
+<<align-hic-to-fasta>>
+#+end_src
+
+#+name: yahs-scaffold
+#+begin_src shell :noweb yes
+<<yahs-scaffold-src>>
+#+end_src
+
+#+name: dotplot-kirkii
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUT=$WORKING/yahs
+FASTA=$OUT/yahs_scaffolds_final.fa
+<<dotplot-kirkii-src>>
+#+end_src
+
+** 6-curate
+
+#+name: chromosome-curation-kk
+| CHR    | STATUS | USE      |
+|--------+--------+----------|
+| Kk_01  | DONE   | ORIGINAL |
+| Kk_2_4 | DONE   | CURATED  |
+| Kk_03  | DONE   | ORIGINAL |
+| Kk_05  | DONE   | CURATED  |
+| Kk_06  | DONE   | ORIGINAL |
+| Kk_07  | DONE   | ORIGINAL |
+| Kk_08  | DONE   | CURATED  |
+| Kk_09  | DONE   | CURATED  |
+| Kk_10  | DONE   | CURATED  |
+| Kk_11  | DONE   | CURATED  |
+| Kk_12  | DONE   | ORIGINAL |
+| Kk_13  | DONE   | CURATED  |
+
+#+name: extract-scaffolds
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/scaffolds/
+SOURCE=$(realpath $WORKING/../5-hic-scaffold/yahs/yahs_scaffolds_final.agp)
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+<<extract-scaffolds-src>>
+#+end_src
+
+#+name: merge-and-dotplot-scaffolds
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/scaffolds/
+OUTDIR=$WORKING/dotplot_scaffolds/
+<<merge-and-dotplot-scaffolds-src>>
+#+end_src
+
+#+name: build-all-chromosomes
+#+header: :var CPUS=48
+#+header: :var CHROMOSOMES=chromosome-curation-kk[,0]
+#+begin_src shell
+cd $WORKING/
+chmod +x $WORKING/build-chromosome.sh
+for CHROMOSOME in ${CHROMOSOMES[@]}; do
+    echo $CHROMOSOME
+    mkdir -p $WORKING/chromosomes/$CHROMOSOME/
+    $WORKING/build-chromosome.sh $CHROMOSOME &> $WORKING/chromosomes/$CHROMOSOME/build.log
+done;
+#+end_src
+
+#+name: build-chromosome
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+CHROMOSOME=$1
+OUTDIR=$WORKING/chromosomes/$CHROMOSOME/
+OUT=$OUTDIR/$CHROMOSOME
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+ALIGNMENT=$WORKING/dotplot_scaffolds/scaffolds.contigs.kirkii
+<<build-chromosome-src>>
+#+end_src
+
+#+name: contact-map-chromosomes
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+<<contact-map-chromosomes-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly
+#+header: :var CPUS=24
+#+header: :var data=../0-raw/readme.org:kk-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/chromosomes/
+OUTDIR=$WORKING/assembly/
+FASTA=$OUTDIR/assembly.fasta
+
+fd -e fasta --exclude "*contigs*" --exclude "*curated*" --search-path $SEARCH_DIR | sort -V | xargs cat > $FASTA
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+#+name: contact-map-chromosome
+#+begin_src shell :noweb yes
+<<contact-map-chromosome-curated-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly-curated
+#+header: :var CHROMOSOMES=chromosome-curation-kk[,0]
+#+header: :var DATA=chromosome-curation-kk
+#+header: :var CPUS=48
+#+header: :var data=../0-raw/readme.org:kk-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+OUTDIR=$WORKING/assembly_curated/
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+<<extract-all-curated-fasta-src>>
+FASTA=$OUTDIR/assembly.fasta
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+#+name: dotplot-assembly-curated
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/assembly_curated/
+<<dotplot-assembly-curated-src>>
+#+end_src
+
+#+name: collect-unplaced
+#+begin_src shell :noweb yes :var PREFIX="Kk"
+<<collect-unplaced-src>>
+#+end_src
+
+*** chromosomes
+**** Kk_01
+
+#+name: Kk_01.curated
+#+begin_src lst
+scf00000014_RagTag.1:1-814935
+-ptg000843l.1:1-20317
+-ptg000642l.1:1-65826
+scf00000013_RagTag_2.3:17001-2144059
+-scf00000013_RagTag_1.3:1-385148
+-scf00000013_RagTag_1.1:1-412805
+ptg000675l.1:1-62349
+-scf00000012_RagTag.3:1-1163179
+-scf00000012_RagTag.1:1-626997
+scf00000011_RagTag.1:1-1874254
+scf00000011_RagTag.3:1-1181473
+scf00000010_RagTag.1:1-2147056
+-scf00000008_RagTag_1.1:1-2094990
+scf00000008_RagTag_2.3:1-2041778
+ptg000422l.1:1-80845
+-ptg001076l.1:1-36276
+scf00000008_RagTag_2.5:1-1782784
+scf00000008_RagTag_2.7:1-1525004
+scf00000009_RagTag_2.3:1-509345
+ptg000181l.1:1-1896427
+ptg000084l.1:1-98142
+-ptg000585l.1:1-81747
+-ptg000626l.1:1-40478
+-ptg000559l.1:556001-618524
+ptg000569l.1:1-58000
+-ptg000377l.1:1-547622
+-scf00000007_RagTag_2.1:1-844312
+scf00000110_RagTag_1.3:1-202881
+ptg001026l.1:1-50919
+ptg000559l.1:5001-20000
+ptg000559l.1:1-5000
+ptg000559l.1:20001-83000
+-ptg000559l.1:457383-553760
+-ptg000559l.1:83001-409900
+ptg000569l.1:58001-80070
+scf00000110_RagTag_2.1:1-126751
+ptg000172l.1:1-307287
+scf00000006_RagTag_1.1:1-827251
+scf00000007_RagTag_1.1:1-1603212
+ptg000236l.1:1-2186387
+ptg000710l.1:1-91073
+scf00000005_RagTag.1:1-314494
+-scf00000004_RagTag.1:1-867888
+ptg000979l.1:1-63712
+scf00000003_RagTag.1:1-947000
+scf00000003_RagTag.3:1-596677
+-scf00000002_RagTag.1:1-1296899
+scf00000001_RagTag.1:1-2905000
+-scf00000001_RagTag.1:2905001-2956231
+scf00000001_RagTag.3:1-814170
+scf00000001_RagTag.5:1-142812
+scf00000001_RagTag.7:1-250991
+scf00000001_RagTag.9:1-940537
+#+end_src
+
+**** Kk_2_4
+
+#+name: Kk_2_4.curated
+#+begin_src lst
+-ptg000735l.1:1-24363
+-scf00000015_RagTag_2.5:1-2030433
+-scf00000015_RagTag_2.3:1-658883
+-scf00000015_RagTag_2.1:1-2239246
+-scf00000015_RagTag_1.1:1-57593
+-scf00000016_RagTag.1:1-215376
+ptg000909l.1:1-41000
+scf00000017_RagTag_1.1:1-3106943
+scf00000018_RagTag.1:1-501659
+scf00000018_RagTag.3:1-208622
+-scf00000019_RagTag.3:1-640186
+-scf00000116_RagTag.1:5830001-6085474
+scf00000040_RagTag_2.9:1-172000
+-scf00000019_RagTag.1:1-2762483
+-scf00000020_RagTag_1.1:1-265344
+-scf00000176_RagTag.1:1-404746
+-scf00000020_RagTag_1.3:1-1461515
+-scf00000030_RagTag_2.3:1-409444
+ptg000964l.1:1-37093
+ptg000582l.1:1-40423
+ptg000087l.1:1-2937444
+-ptg000002l.1:1-2810279
+ptg000993l.1:1-36877
+-scf00000178_RagTag.1:1-847140
+-scf00000111_RagTag.3:1-188953
+ptg000088l_2.1:1-2573035
+-scf00000041_RagTag_2.3:1-359654
+-ptg000476l.1:1-193545
+-scf00000056_RagTag.1:1-318279
+scf00000055_RagTag.5:1-295565
+-scf00000041_RagTag_1.5:1-1632863
+-scf00000041_RagTag_1.3:1-501415
+-scf00000041_RagTag_1.1:1-1016045
+ptg000349l_1.1:369001-1843310
+-ptg000746l.1:1-66116
+-scf00000042_RagTag.7:1-2815779
+-scf00000042_RagTag.5:1-159600
+-scf00000042_RagTag.3:1-717814
+-scf00000042_RagTag.1:1-680909
+scf00000043_RagTag.1:1-1944206
+scf00000043_RagTag.3:1-960162
+scf00000043_RagTag.5:1-397245
+scf00000043_RagTag.7:1-135193
+#+end_src
+
+**** Kk_05
+
+#+name: Kk_05.curated
+#+begin_src lst
+-scf00000058_RagTag_2.3:1-208038
+-scf00000064_RagTag_2.5:231001-330840
+scf00000040_RagTag_2.11:1-170000
+-scf00000058_RagTag_2.1:1-2549816
+-ptg000755l.1:1-187084
+scf00000162_RagTag.1:1-159097
+-scf00000173_RagTag.1:1-167147
+scf00000058_RagTag_1.1:1-913564
+-scf00000057_RagTag_2.1:1-2338165
+-scf00000057_RagTag_1.1:1-925217
+scf00000056_RagTag.3:1-135606
+-scf00000059_RagTag.1:1-189317
+scf00000054_RagTag_2.3:1-405661
+-scf00000054_RagTag_2.1:1-290825
+scf00000017_RagTag_2.1:1-574538
+-scf00000055_RagTag.3:1001-146505
+-scf00000054_RagTag_1.5:1-1337370
+scf00000053_RagTag_2.3:1-650519
+scf00000050_RagTag.1:1-996445
+scf00000051_RagTag_1.1:1-388659
+scf00000051_RagTag_1.3:1-561152
+-scf00000030_RagTag_2.5:1-198356
+-ptg000559l.1:553761-556000
+ptg000534l.1:45001-55000
+ptg000534l.1:55001-122260
+-ptg000785l.1:1-48302
+ptg000423l.1:1-76606
+-ptg000435l.1:1-62483
+ptg000702l.1:1-86260
+ptg000717l.1:1-76938
+ptg001061l.1:1-22752
+-ptg001087l.1:1-51454
+ptg000466l.1:1-181675
+ptg000335l.1:1-62354
+ptg000068l.1:1-133463
+ptg000733l.1:1-33376
+-ptg001296l.1:1-28033
+-scf00000161_RagTag.1:1-2586535
+-scf00000053_RagTag_1.1:1-1428212
+-ptg000080l_2.1:1-1121654
+-scf00000052_RagTag.3:1-195072
+-scf00000051_RagTag_2.2:1-157608
+scf00000049_RagTag.1:1-1530609
+scf00000048_RagTag.1:1-1166246
+scf00000048_RagTag.3:1-383132
+scf00000048_RagTag.5:1-2095800
+-scf00000047_RagTag.9:1-160294
+-scf00000047_RagTag.5:1-789586
+-scf00000047_RagTag.3:1-529910
+-scf00000047_RagTag.1:1-1309000
+ptg001021l.1:1-80652
+scf00000046_RagTag.1:1-431879
+scf00000046_RagTag.3:1-420816
+scf00000046_RagTag.5:1-286619
+scf00000046_RagTag.7:1-1775040
+scf00000046_RagTag.9:3001-651773
+scf00000046_RagTag.11:1-776726
+scf00000045_RagTag.1:1-1744074
+scf00000045_RagTag.3:1-1269848
+scf00000045_RagTag.5:1-306446
+scf00000045_RagTag.7:1-2325806
+-ptg000340l.1:1-203000
+scf00000045_RagTag.9:1-1529707
+scf00000045_RagTag.11:1-1535023
+scf00000045_RagTag.13:1-711480
+scf00000045_RagTag.15:1-263429
+ptg000814l.1:1-49609
+scf00000044_RagTag.1:1-1868017
+scf00000044_RagTag.3:1-2738327
+scf00000044_RagTag.5:1-1821504
+scf00000044_RagTag.7:1-1157639
+-ptg000007l_1.1:1-516670
+scf00000044_RagTag.9:1-376023
+scf00000044_RagTag.11:1-469379
+#+end_src
+
+**** Kk_06
+
+#+name: Kk_06.curated
+#+begin_src lst
+scf00000037_RagTag_2.5:8001-245070
+scf00000037_RagTag_2.7:2001-107872
+scf00000037_RagTag_2.9:1-108656
+-scf00000038_RagTag_2.1:1-1072372
+ptg000850l.1:1-89389
+-scf00000038_RagTag_1.1:1-39526
+-scf00000039_RagTag.3:1-198114
+-scf00000039_RagTag.1:1-536756
+ptg000524l.1:1-97175
+scf00000040_RagTag_1.1:1-1655605
+ptg000208l.1:1-1409798
+scf00000069_RagTag.1:1-2911209
+-scf00000070_RagTag.1:1-918180
+scf00000071_RagTag.1:1-2571075
+-scf00000037_RagTag_2.3:1-1486032
+-ptg000349l_2.1:1-2008508
+-scf00000023_RagTag.1:1-416905
+scf00000024_RagTag.1:1-1720569
+-ptg000750l.1:1001-88326
+scf00000094_RagTag.1:460001-899611
+scf00000024_RagTag.3:1-1538567
+scf00000024_RagTag.5:1-513650
+ptg001742l.1:1-29471
+scf00000035_RagTag.1:1-1280410
+scf00000036_RagTag.1:1-583764
+scf00000036_RagTag.3:1-1643549
+ptg000841l.1:1-37490
+scf00000037_RagTag_1.1:1-659823
+-scf00000037_RagTag_1.3:1-188007
+scf00000037_RagTag_1.5:1-310444
+-scf00000072_RagTag_2.1:1-227000
+-scf00000072_RagTag_1.9:1-449110
+scf00000037_RagTag_1.7:1-89487
+-scf00000022_RagTag.1:1-2463727
+-scf00000072_RagTag_1.1:2502001-2970231
+-ptg000192l_2.1:1-565443
+scf00000021_RagTag.1:1-2963446
+-ptg000363l_2.1:1-3059500
+-ptg000119l.1:1-64014
+-scf00000160_RagTag.1:1-837029
+scf00000020_RagTag_2.3:1-419338
+-scf00000025_RagTag_2.1:1-649626
+-scf00000025_RagTag_1.1:286001-827590
+-scf00000087_RagTag_2.5:1-620722
+scf00000167_RagTag.1:1-230643
+-ptg000820l.1:1-122297
+ptg001048l.1:1-38849
+ptg000899l.1:1-182211
+ptg000847l.1:1-104208
+ptg001017l.1:1-25413
+ptg000930l.1:1-21339
+scf00000068_RagTag_1.1:1-975396
+-scf00000068_RagTag_2.1:1-619243
+scf00000067_RagTag.1:1-369636
+ptg000768l.1:1-57364
+-ptg000163l.1:1-96784
+-ptg000707l.1:1-91131
+scf00000164_RagTag.1:2001-155054
+-scf00000065_RagTag_1.3:1-3075449
+-scf00000065_RagTag_1.1:1-1190013
+scf00000100_RagTag_2.41:2151001-2771587
+scf00000124_RagTag_2.1:249001-782495
+-scf00000066_RagTag.1:1-759904
+scf00000065_RagTag_2.1:1-650999
+scf00000065_RagTag_2.3:1-241174
+-scf00000064_RagTag_1.1:1-919417
+scf00000063_RagTag.1:1-1950122
+scf00000062_RagTag.1:1-879254
+scf00000062_RagTag.3:1-1269772
+ptg000777l.1:1-41417
+scf00000061_RagTag.1:1-650673
+scf00000061_RagTag.3:1-179764
+-ptg000698l.1:1-33375
+scf00000060_RagTag.1:1-2226938
+scf00000040_RagTag_2.3:1-223722
+scf00000040_RagTag_2.5:1-166810
+scf00000040_RagTag_2.7:1-552319
+scf00000040_RagTag_2.9:172001-549223
+scf00000040_RagTag_2.11:170001-548090
+ptg000721l.1:1-69785
+scf00000040_RagTag_2.13:1-1444155
+scf00000040_RagTag_2.15:1-307048
+#+end_src
+
+**** Kk_08
+
+#+name: Kk_08.curated
+#+begin_src lst
+-ptg001217l.1:1-29338
+scf00000081_RagTag.1:1-798294
+scf00000081_RagTag.3:1-617953
+scf00000081_RagTag.5:1-454785
+scf00000064_RagTag_2.5:1-231000
+scf00000081_RagTag.7:1-227978
+scf00000081_RagTag.9:1-2415209
+ptg000387l.1:1-86801
+-scf00000083_RagTag.1:1-1563905
+scf00000084_RagTag.1:1-429539
+scf00000084_RagTag.3:1-382939
+scf00000084_RagTag.5:3001-243968
+scf00000084_RagTag.7:1-153628
+scf00000084_RagTag.9:1-388631
+scf00000171_RagTag.1:1-319465
+scf00000084_RagTag.9:388632-686696
+-scf00000085_RagTag_1.1:1-1399233
+scf00000085_RagTag_2.1:1-304600
+scf00000085_RagTag_2.3:1-1854972
+-scf00000085_RagTag_2.5:1-219929
+-scf00000086_RagTag.3:1-427238
+-scf00000086_RagTag.1:1-3305378
+-scf00000151_RagTag_1.7:1253001-1783219
+-scf00000009_RagTag_1.1:1-226713
+ptg000159l.1:1-27971
+ptg000638l.1:1-81090
+-scf00000009_RagTag_2.1:1-839975
+-ptg000218l.1:1-4348706
+scf00000087_RagTag_1.1:1-596799
+ptg000029l.1:1-2967927
+-scf00000089_RagTag_2.1:1-5575264
+-scf00000089_RagTag_1.1:1-62569
+scf00000090_RagTag.1:1-659655
+scf00000090_RagTag.3:1-1055452
+scf00000090_RagTag.5:1-458483
+scf00000090_RagTag.7:1-345511
+scf00000090_RagTag.9:1001-153633
+ptg000769l.1:1-50606
+scf00000091_RagTag.1:1-1144754
+scf00000091_RagTag.3:1-562786
+scf00000091_RagTag.5:1-1817496
+scf00000091_RagTag.7:1-1154484
+scf00000091_RagTag.9:1-202126
+scf00000091_RagTag.11:1-1407326
+#+end_src
+
+**** Kk_09
+
+#+name: Kk_09.curated
+#+begin_src lst
+scf00000100_RagTag_1.1:1-190555
+scf00000100_RagTag_2.1:1001-160769
+scf00000100_RagTag_2.3:1-356240
+scf00000100_RagTag_2.5:1-265661
+scf00000100_RagTag_2.7:1-493494
+scf00000100_RagTag_2.9:1-1259677
+-scf00000100_RagTag_2.11:1-45000
+scf00000100_RagTag_2.11:45001-1902086
+scf00000100_RagTag_2.13:1-1058549
+scf00000100_RagTag_2.15:1-119858
+scf00000100_RagTag_2.17:1-541528
+-scf00000102_RagTag.1:1-1132703
+scf00000100_RagTag_2.19:1-2235645
+scf00000100_RagTag_2.21:1-1359890
+scf00000100_RagTag_2.23:1-722061
+scf00000100_RagTag_2.25:1-315636
+scf00000100_RagTag_2.27:1-450636
+ptg000363l_1.1:1-452005
+-scf00000101_RagTag.1:1-1963161
+ptg000734l.1:1-62886
+scf00000100_RagTag_2.29:1-275571
+scf00000100_RagTag_2.31:1-363235
+scf00000100_RagTag_2.33:1-1851432
+-ptg000287l.1:1-717923
+scf00000100_RagTag_2.35:1-332071
+scf00000100_RagTag_2.37:1-768022
+scf00000100_RagTag_2.39:1-406320
+scf00000100_RagTag_2.41:1-2151000
+scf00000100_RagTag_2.43:3001-131002
+-scf00000099_RagTag_2.3:1-519709
+-scf00000028_RagTag_2.5:1-288672
+-ptg000705l.1:1-62512
+-ptg000688l.1:1-343820
+ptg000442l.1:1-136615
+-ptg000885l.1:1-47415
+ptg000914l.1:1-26311
+-ptg000407l.1:1-45798
+-ptg000630l.1:1-292748
+-ptg000445l.1:1-380030
+scf00000096_RagTag_1.3:1-392067
+scf00000096_RagTag_2.1:1-472629
+scf00000165_RagTag.3:1-178828
+-scf00000165_RagTag.1:1-507302
+scf00000099_RagTag_1.1:1-1507288
+-scf00000099_RagTag_2.1:1-183213
+-scf00000099_RagTag_1.3:1-282032
+-ptg000484l.1:1-243624
+-scf00000151_RagTag_1.9:1-307242
+ptg000507l.1:1-212465
+scf00000097_RagTag_1.1:17001-715949
+scf00000098_RagTag.1:1-601614
+ptg000730l.1:1-46047
+ptg000265l.1:1-54698
+scf00000086_RagTag.5:1-126884
+ptg000548l.1:1-79702
+-ptg000718l.1:1-48033
+ptg000724l.1:1-70279
+scf00000098_RagTag.1:601615-691614
+ptg000775l.1:1-38282
+scf00000097_RagTag_2.3:1-100000
+scf00000097_RagTag_2.3:100001-2556457
+scf00000097_RagTag_2.5:1-142184
+scf00000097_RagTag_2.7:1-314671
+scf00000096_RagTag_1.1:1-2212211
+scf00000095_RagTag_2.1:1-897326
+-scf00000094_RagTag.1:1-460000
+-scf00000095_RagTag_1.3:1-379625
+-scf00000095_RagTag_1.1:1-730554
+scf00000093_RagTag.1:1-1134536
+scf00000093_RagTag.3:1-368427
+ptg000888l.1:1001-90017
+-scf00000092_RagTag.1:1-1011104
+#+end_src
+
+#+name: middle
+#+begin_src lst
+-scf00000099_RagTag_2.3:1-519709
+-scf00000028_RagTag_2.5:1-288672
+-ptg000705l.1:1-62512
+-ptg000688l.1:1-343820
+ptg000442l.1:1-136615
+-ptg000885l.1:1-47415
+ptg000914l.1:1-26311
+-ptg000407l.1:1-45798
+-ptg000630l.1:1-292748
+-ptg000445l.1:1-380030
+-scf00000097_RagTag_2.3:1-100000
+ptg000730l.1:1-46047
+ptg000265l.1:1-54698
+scf00000086_RagTag.5:1-126884
+ptg000548l.1:1-79702
+-ptg000718l.1:1-48033
+ptg000724l.1:1-70279
+scf00000098_RagTag.1:601615-691614
+ptg000775l.1:1-38282
+scf00000096_RagTag_1.3:1-392067
+#+end_src
+
+**** Kk_10
+
+#+name: Kk_10.curated
+#+begin_src lst
+-scf00000103_RagTag.1:1-770668
+-ptg000286l.1:1-56218
+-scf00000104_RagTag.1:1-824281
+scf00000105_RagTag.1:1-480978
+ptg000789l.1:1-64888
+-ptg001336l.1:1-25892
+-scf00000106_RagTag_2.3:1-138740
+-scf00000106_RagTag_2.1:1-276002
+-scf00000106_RagTag_1.1:581001-698676
+-scf00000106_RagTag_1.1:248001-581000
+-scf00000106_RagTag_1.1:1-189000
+-ptg000669l.1:1-53319
+ptg000546l.1:1-89229
+-ptg000618l.1:1-28964
+-scf00000107_RagTag.1:1-1358753
+-scf00000108_RagTag_2.3:1-289485
+-scf00000108_RagTag_2.1:1-406533
+-scf00000108_RagTag_1.1:1-522030
+scf00000109_RagTag.1:1-2636739
+-ptg000145l.1:1-42913
+-scf00000110_RagTag_2.11:1001-155398
+-scf00000110_RagTag_2.9:709001-1593163
+-scf00000166_RagTag.1:4918001-5075033
+-scf00000166_RagTag.1:1-4918000
+scf00000112_RagTag.1:1-2119844
+scf00000110_RagTag_2.7:1-280456
+-scf00000170_RagTag.1:1-1028919
+-ptg000811l.1:1-58871
+ptg000419l.1:1-82133
+-ptg000607l.1:1-24958
+-scf00000030_RagTag_2.5:198357-203356
+-ptg000559l.1:409901-457382
+ptg000816l.1:1-54295
+ptg000456l.1:1-31187
+ptg000816l.1:54296-135739
+ptg001199l.1:1-25077
+ptg000537l.1:1-60307
+ptg000528l.1:1-77890
+-ptg001069c.1:1-28208
+ptg000839l.1:1-25937
+ptg000598l.1:1-48562
+-ptg001394l.1:1-89943
+ptg000928l.1:1-54695
+-ptg000861l.1:1-89756
+ptg000460l.1:1-22293
+ptg000509l.1:1-22586
+ptg001008l.1:1-26752
+ptg000468l.1:1-2362633
+-scf00000114_RagTag.3:1-1456171
+-scf00000114_RagTag.1:1-1487443
+-ptg000128l.1:1-2085115
+scf00000115_RagTag.1:1-3298312
+-scf00000174_RagTag.1:1-490542
+scf00000110_RagTag_1.1:1-540662
+scf00000110_RagTag_2.3:1-868830
+scf00000110_RagTag_2.5:1-201604
+-scf00000116_RagTag.1:1-5830000
+scf00000118_RagTag.1:1-2374119
+-scf00000118_RagTag.3:1-156909
+-scf00000119_RagTag.7:1-1213575
+-scf00000119_RagTag.5:1-1114046
+-scf00000119_RagTag.3:1-2019281
+-scf00000119_RagTag.1:1-796816
+ptg000829l.1:1-50780
+scf00000120_RagTag.1:1-299314
+#+end_src
+
+**** Kk_11
+
+#+name: Kk_11.curated
+#+begin_src lst
+scf00000133_RagTag.1:1-1353170
+scf00000132_RagTag.1:1-1295394
+scf00000132_RagTag.3:1-513682
+ptg000934l.1:1-61297
+-ptg000012l_1.1:1-599779
+scf00000130_RagTag_2.5:1-560548
+scf00000131_RagTag.1:1-337846
+-scf00000131_RagTag.3:1-321212
+-scf00000130_RagTag_2.3:1-572368
+-scf00000130_RagTag_2.1:1-1641745
+scf00000127_RagTag_1.1:1-1030499
+scf00000127_RagTag_1.3:1-397951
+ptg000760l.1:4001-49975
+scf00000130_RagTag_1.1:1-453985
+-scf00000125_RagTag.9:1-1089226
+-scf00000125_RagTag.7:1-160429
+scf00000125_RagTag.5:1-394350
+-scf00000125_RagTag.3:1-979532
+-scf00000125_RagTag.1:1-1048723
+-ptg000513l.1:1-46008
+scf00000129_RagTag.1:1-2446211
+scf00000129_RagTag.3:1-2682370
+scf00000129_RagTag.5:1-223012
+ptg000075l.1:1-2363199
+-scf00000123_RagTag_1.1:1-1049299
+scf00000128_RagTag.1:1-812926
+-scf00000127_RagTag_2.3:1-240822
+ptg000167l.1:1-286156
+ptg000272l.1:1-75177
+scf00000052_RagTag.1:1-561813
+ptg000222l.1:1-1297838
+-scf00000088_RagTag_1.1:1-547132
+scf00000088_RagTag_1.3:1-424845
+-ptg000359l.1:1-882854
+scf00000127_RagTag_2.5:1-165448
+scf00000127_RagTag_2.7:1-455761
+scf00000127_RagTag_2.9:1-994802
+scf00000127_RagTag_2.11:1-1025954
+scf00000127_RagTag_2.13:1-678341
+scf00000127_RagTag_2.15:1001-233257
+-scf00000121_RagTag_1.5:1-1809764
+scf00000126_RagTag.1:1-1375348
+scf00000126_RagTag.3:1-449635
+scf00000124_RagTag_1.1:1-1703323
+scf00000124_RagTag_1.5:1-236168
+scf00000124_RagTag_1.7:1-672236
+scf00000124_RagTag_1.9:1-198575
+scf00000124_RagTag_2.1:2001-249000
+ptg000797l.1:1-53874
+-scf00000123_RagTag_2.3:1-861954
+-scf00000123_RagTag_2.1:1-348716
+ptg000088l_1.1:1-916562
+scf00000122_RagTag_2.1:1-170331
+scf00000122_RagTag_2.3:1-1234236
+ptg000340l.1:203001-527403
+-ptg000349l_1.1:1-369000
+-scf00000121_RagTag_2.7:1-2161286
+-scf00000121_RagTag_2.5:1-650963
+-scf00000121_RagTag_2.3:1-1207000
+-scf00000121_RagTag_2.1:1-3745000
+-scf00000121_RagTag_1.3:1-437760
+-scf00000121_RagTag_1.1:32001-1263975
+-ptg000505l.1:2001-68692
+ptg001229l.1:1-26634
+#+end_src
+
+**** Kk_12
+
+#+name: Kk_12.curated
+#+begin_src lst
+-scf00000148_RagTag.3:1-421328
+-scf00000148_RagTag.1:1-2567210
+-ptg000245l_2.1:1-1867749
+-ptg000719l.1:2001-58331
+-scf00000147_RagTag.1:1-934588
+scf00000146_RagTag.1:1-458227
+-scf00000179_RagTag.1:324001-393324
+scf00000146_RagTag.3:1-498144
+scf00000146_RagTag.5:1-1642998
+scf00000146_RagTag.7:1-475294
+ptg000192l_1.1:1-515331
+scf00000134_RagTag_2.1:1-3892860
+scf00000134_RagTag_2.3:1-479657
+-scf00000135_RagTag.3:1-634434
+-scf00000135_RagTag.1:1-1970170
+-ptg000376l.1:1-93609
+scf00000139_RagTag.3:2001-124690
+scf00000141_RagTag.1:1-264996
+-scf00000139_RagTag.5:1-774837
+-scf00000139_RagTag.1:1-2637394
+-scf00000040_RagTag_2.1:1-56082
+-scf00000040_RagTag_1.3:1-150745
+scf00000138_RagTag_2.3:1-449187
+-scf00000138_RagTag_2.5:1-471854
+ptg000389l.1:1-2002394
+scf00000138_RagTag_1.1:1-305196
+-ptg000291l.1:1-4281170
+ptg000243l.1:1-724506
+scf00000137_RagTag.1:1-535166
+-ptg000658l.1:1-54651
+scf00000140_RagTag.1:1-990359
+scf00000138_RagTag_1.3:1-2043611
+-scf00000177_RagTag.1:1-168275
+scf00000137_RagTag.3:1-212154
+scf00000142_RagTag.1:1-2695071
+scf00000143_RagTag.1:1-450624
+scf00000143_RagTag.3:1-956321
+scf00000144_RagTag.1:1-232686
+scf00000144_RagTag.3:1-444869
+scf00000145_RagTag.1:1-2392339
+-scf00000134_RagTag_1.3:1-1307262
+-scf00000013_RagTag_2.1:1-338982
+-scf00000134_RagTag_1.1:1-638016
+-scf00000136_RagTag.1:15001-416993
+scf00000159_RagTag.1:1-211000
+scf00000076_RagTag.1:1-190776
+-scf00000137_RagTag.5:1-156952
+#+end_src
+
+**** Kk_13
+
+#+name: Kk_13.curated
+#+begin_src lst
+scf00000149_RagTag.1:1-715666
+scf00000149_RagTag.3:1-4271052
+scf00000150_RagTag.1:1-464708
+-scf00000151_RagTag_2.1:1-639073
+scf00000151_RagTag_1.7:1-1253000
+-scf00000151_RagTag_1.5:1-581143
+-scf00000151_RagTag_1.3:1-503758
+-scf00000151_RagTag_1.1:1-1174937
+-scf00000152_RagTag.1:1-420176
+-scf00000168_RagTag.5:1-2514554
+-scf00000168_RagTag.3:1-1930632
+scf00000175_RagTag.1:1-121240
+scf00000037_RagTag_2.1:1-446322
+-ptg000743l.1:1-26678
+ptg000745l.1:1-166727
+-ptg000173l.1:1-1113805
+-scf00000168_RagTag.1:1-2499112
+scf00000169_RagTag.1:1-1051390
+ptg000054l.1:1-1363963
+scf00000111_RagTag.1:1-1827217
+scf00000153_RagTag.1:1-285317
+scf00000153_RagTag.3:1-936530
+ptg000762l.1:1-38056
+scf00000154_RagTag.1:1-2000107
+scf00000154_RagTag.3:1-289627
+scf00000154_RagTag.5:1-253766
+scf00000155_RagTag.1:1-403501
+-ptg000007l_2.1:1-1058936
+scf00000155_RagTag.3:1-255740
+scf00000156_RagTag.1:1-3916357
+scf00000156_RagTag.3:1-267366
+scf00000156_RagTag.5:1-112256
+ptg001039l.1:1-20305
+scf00000156_RagTag.7:1-979765
+-scf00000157_RagTag_1.1:1-657528
+-scf00000156_RagTag.9:1-846650
+scf00000157_RagTag_2.1:1-1145152
+scf00000158_RagTag_1.1:1-1046772
+scf00000159_RagTag.1:211001-433719
+-ptg000241l.1:1-50780
+scf00000158_RagTag_2.3:1-525121
+-scf00000158_RagTag_2.5:1-236100
+scf00000158_RagTag_2.7:1-1298049
+scf00000158_RagTag_2.9:1-287762
+#+end_src
+****
+* Kokia cookei C69
+
+#+name: assembly-stages-kc
+| Kokia_cookei_C69/1-contigs/genome.hic.p_ctg.fa               |
+| Kokia_cookei_C69/2-polish/consensus.fasta                    |
+| Kokia_cookei_C69/3-arrange/ragtag.merge.fasta                |
+| Kokia_cookei_C69/4-salsa/salsa/scaffolds_FINAL.fasta         |
+| Kokia_cookei_C69/5-hic-scaffold/yahs/yahs_scaffolds_final.fa |
+| Kokia_cookei_C69/6-curate/assembly_curated/assembly.fasta    |
+
+#+call: abyss-summary(genome=(org-sbe genome-string (genomes assembly-stages-kc)))
+
+#+RESULTS:
+| name   | 1-contigs | 2-polish | 3-arrange | 4-salsa | 5-hic-scaffold | 6-curate |
+|--------+-----------+----------+-----------+---------+----------------+----------|
+| n      |      2046 |     2046 |      1856 |    1520 |           1442 |       12 |
+| n:500  |      2046 |     2046 |      1856 |    1520 |           1442 |       12 |
+| L50    |        85 |       85 |        54 |      28 |              4 |        6 |
+| min    |      1458 |     1465 |      1465 |    1465 |           1000 |  36.49e6 |
+| N75    |   1012372 |  1012881 |   1852164 | 2233482 |        17.02e6 |  39.26e6 |
+| N50    |   2046115 |  2046239 |   3372169 | 4586710 |        53.38e6 |  42.33e6 |
+| N25    |   3400100 |  3401766 |   5196010 | 11.82e6 |        73.18e6 |  49.07e6 |
+| E-size |   2411995 |  2412930 |   4071711 | 8821429 |        55.25e6 |  44.89e6 |
+| max    |   8940624 |  8945492 |   16.73e6 | 38.94e6 |        121.3e6 |  57.92e6 |
+| sum    |   567.7e6 |  567.8e6 |   567.8e6 | 567.8e6 |        567.8e6 |  527.9e6 |
+#+tblfm: @2$2..@>$>=$0;e4
+
+#+name: annex
+#+begin_src shell :var data=assembly-stages-kc
+for FILE in "${data[@]}"; do
+    FILE=$(echo $FILE | sed -e 's/Kokia_cookei_C69\///')
+    echo $FILE
+    gzip $FILE
+    git annex add $FILE.gz
+done
+#+end_src
+
+
+** 1-contigs
+
+#+name: combine-long-reads
+#+header: :var runs=../0-raw/readme.org:kc-nanopore-sup[,1]
+#+begin_src shell :noweb yes
+<<combined-long-reads-src>>
+#+end_src
+
+#+name: assemble
+#+header: :var CPUS=24
+#+begin_src shell :noweb yes
+RAW=$ROOT/wgs/0-raw/kc/hi-c
+<<hifiasm>>
+#+end_src
+
+** 2-polish
+
+#+name: polish
+#+header: :var CPUS=12
+#+begin_src shell :noweb yes
+GENOME=$WORKING/../1-contigs/genome.hic.p_ctg.fa
+<<medaka-polish>>
+#+end_src
+
+** 3-arrange
+
+#+name: ragtag
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+FASTA=$WORKING/../2-polish/consensus.fasta
+<<ragtag-scaffold>>
+<<ragtag-merge>>
+#+end_src
+
+** 4-salsa
+
+#+name: salsa
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+<<setup-scaffolds>>
+<<index-genome>>
+<<align-hic>>
+<<bam-to-bed>>
+<<run-salsa>>
+#+end_src
+
+** 5-hic-scaffold
+
+#+name: align-hic-to-fasta
+#+header: :var data=../0-raw/readme.org:kc-hic
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+create_fasta () {
+    <<extract-scaffolds-parallel-src>>
+}
+
+<<align-hic-to-fasta>>
+#+end_src
+
+#+name: yahs-scaffold
+#+begin_src shell :noweb yes
+<<yahs-scaffold-src>>
+#+end_src
+
+#+name: dotplot-kirkii
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUT=$WORKING/yahs
+FASTA=$OUT/yahs_scaffolds_final.fa
+<<dotplot-kirkii-src>>
+#+end_src
+
+** 6-curate
+
+#+name: chromosome-curation-kc
+| CHR    | STATUS | USE      |
+|--------+--------+----------|
+| Kc_01  | DONE   | ORIGINAL |
+| Kc_2_4 | DONE   | CURATED  |
+| Kc_03  | DONE   | ORIGINAL |
+| Kc_05  | DONE   | CURATED  |
+| Kc_06  | DONE   | ORIGINAL |
+| Kc_07  | DONE   | ORIGINAL |
+| Kc_08  | DONE   | CURATED  |
+| Kc_09  | DONE   | CURATED  |
+| Kc_10  | DONE   | CURATED  |
+| Kc_11  | DONE   | CURATED  |
+| Kc_12  | DONE   | CURATED  |
+| Kc_13  | DONE   | CURATED  |
+
+#+name: extract-scaffolds
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/scaffolds/
+SOURCE=$(realpath $WORKING/../5-hic-scaffold/yahs/yahs_scaffolds_final.agp)
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+<<extract-scaffolds-src>>
+#+end_src
+
+#+name: merge-and-dotplot-scaffolds
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/scaffolds/
+OUTDIR=$WORKING/dotplot_scaffolds/
+<<merge-and-dotplot-scaffolds-src>>
+#+end_src
+
+#+name: build-all-chromosomes
+#+header: :var CPUS=48
+#+header: :var CHROMOSOMES=chromosome-curation-kc[,0]
+#+begin_src shell
+cd $WORKING/
+chmod +x $WORKING/build-chromosome.sh
+for CHROMOSOME in ${CHROMOSOMES[@]}; do
+    echo $CHROMOSOME
+    mkdir -p $WORKING/chromosomes/$CHROMOSOME/
+    $WORKING/build-chromosome.sh $CHROMOSOME &> $WORKING/chromosomes/$CHROMOSOME/build.log
+done;
+#+end_src
+
+#+name: build-chromosome
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+CHROMOSOME=$1
+OUTDIR=$WORKING/chromosomes/$CHROMOSOME/
+OUT=$OUTDIR/$CHROMOSOME
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+ALIGNMENT=$WORKING/dotplot_scaffolds/scaffolds.contigs.kirkii
+<<build-chromosome-src>>
+#+end_src
+
+#+name: contact-map-chromosomes
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+<<contact-map-chromosomes-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly
+#+header: :var CPUS=24
+#+header: :var data=../0-raw/readme.org:kc-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+SEARCH_DIR=$WORKING/chromosomes/
+OUTDIR=$WORKING/assembly/
+FASTA=$OUTDIR/assembly.fasta
+
+fd -e fasta --exclude "*contigs*" --exclude "*curated*" --search-path $SEARCH_DIR | sort -V | xargs cat > $FASTA
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+#+name: contact-map-chromosome
+#+begin_src shell :noweb yes
+<<contact-map-chromosome-curated-src>>
+#+end_src
+
+#+name: merge-and-contact-map-assembly-curated
+#+header: :var CHROMOSOMES=chromosome-curation-kc[,0]
+#+header: :var DATA=chromosome-curation-kc
+#+header: :var CPUS=48
+#+header: :var data=../0-raw/readme.org:kc-hic
+#+begin_src shell :noweb yes
+ml gcc/11.3.0 fd minimap2/2.17 r/4.0.2
+OUTDIR=$WORKING/assembly_curated/
+FASTA=$(realpath $WORKING/../5-hic-scaffold/alignment/scaffolds.fasta)
+<<extract-all-curated-fasta-src>>
+FASTA=$OUTDIR/assembly.fasta
+<<merge-and-contact-map-assembly-src>>
+#+end_src
+
+
+
+#+name: reverse_Kc_06
+#+begin_src python
+with open('assembly_curated/assembly.clean.fasta') as assembly_file:
+    lines = assembly_file.read()
+    chromosomes = lines.split(">")[1:]
+    for chromosome in chromosomes:
+        sequence_id = chromosome.split("\n")[0]
+        sequence = "".join(chromosome.split("\n")[1:])
+        if sequence_id == "Kc_06":
+            sequence = sequence[::-1]
+        print(f">{sequence_id}\n{sequence}")
+#+end_src
+
+#+name: reverse_Kc_06
+#+begin_src shell
+ml python/3.9.2 seqtk
+# mv $WORKING/assembly_curated/assembly.clean.fasta $WORKING/assembly_curated/assembly.clean.fasta.bak
+python3 $WORKING/reverse_Kc_06.py | seqtk seq -l80 - > $WORKING/assembly_curated/assembly.fasta
+#+end_src
+
+
+#+name: dotplot-assembly-curated
+#+header: :var CPUS=48
+#+begin_src shell :noweb yes
+OUTDIR=$WORKING/assembly_curated/
+<<dotplot-assemcbly-curated-src>>
+#+end_src
+
+#+name: collect-unplaced
+#+begin_src shell :noweb yes
+<<collect-unplaced-src>>
+#+end_src
+
+*** chromosomes
+
+**** Kc_2_4
+
+#+name: Kc_2_4.curated
+#+begin_src lst
+-scaffold_144:1001-637392
+-scaffold_42:1-3656922
+-scaffold_293:1-33000
+-scaffold_175:1-357158
+scaffold_133:28001-764199
+-scaffold_65:1-2486748
+scaffold_90:1-872000
+-scaffold_31:1-4454000
+scaffold_405:1-29561
+scaffold_191:1001-213312
+-scaffold_111:1-1191770
+scaffold_37:2800001-3000000
+scaffold_37:3200001-3800000
+scaffold_37:3800001-4101133
+scaffold_57:2240001-2684490
+scaffold_73:1-849000
+scaffold_134:1-749529
+scaffold_185:11001-263361
+scaffold_209:1-125798
+-scaffold_327:1-41203
+-scaffold_27:1327001-4654377
+-scaffold_7:9306001-9666000
+scaffold_146:149001-595474
+scaffold_1:14620001-14787000
+-scaffold_8:140001-2599000
+scaffold_277:7001-57463
+-scaffold_44:24001-3365589
+-scaffold_44:1-24000
+scaffold_63:1-2555032
+scaffold_91:1-1699404
+-scaffold_150:523001-565931
+-scaffold_150:1-523000
+scaffold_43:1-3289000
+#+end_src
+
+**** Kc_03
+
+#+name: Kc_03.curated
+#+begin_src lst
+scaffold_1:33025001-33350000
+scaffold_1:26500001-28426000
+-scaffold_1:20950001-26500000
+scaffold_86:26001-1753867
+scaffold_122:1-983638
+-scaffold_113:1-1154174
+scaffold_1:1-2000000
+scaffold_265:1-62435
+scaffold_1:2000001-14620000
+scaffold_2:16625001-17000000
+scaffold_1:14787001-15787000
+scaffold_1:16528001-20950000
+-scaffold_13:1148001-7566056
+-scaffold_62:514001-2572272
+-scaffold_62:1-514000
+scaffold_140:1-677533
+#+end_src
+
+#+name: Kc_03.curated
+#+begin_src lst
+scaffold_113:1-1154174
+-scaffold_265:1-62435
+scaffold_1:26500001-28426000
+-scaffold_86:26001-1753867
+scaffold_1:33025001-33350000
+scaffold_1:20950001-26500000
+-scaffold_122:1-983638
+scaffold_1:1-2000000
+scaffold_2:16625001-17000000
+scaffold_1:2000001-14620000
+scaffold_1:14787001-15787000
+scaffold_1:16528001-20950000
+-scaffold_13:1148001-7566056
+-scaffold_62:514001-2572272
+-scaffold_62:1-514000
+scaffold_140:1-677533
+#+end_src
+
+**** Kc_05
+
+#+name: Kc_05.curated
+#+begin_src lst
+-scaffold_130:1-785512
+scaffold_100:1-1406579
+scaffold_157:3001-532484
+-scaffold_22:1-5904404
+-scaffold_3:9724001-16734885
+-scaffold_3:1-8860000
+scaffold_69:1849001-2421669
+scaffold_37:1-2800000
+scaffold_37:3000001-3200000
+-scaffold_3:8927001-9724000
+scaffold_36:1-4166020
+scaffold_121:1-995321
+scaffold_161:1-470477
+-scaffold_387:1-31958
+scaffold_101:7001-65000
+scaffold_101:65001-1403534
+-scaffold_57:200001-2240000
+-scaffold_57:1001-200000
+scaffold_83:1-1784556
+-scaffold_64:1-2512004
+scaffold_59:1-2609189
+-scaffold_10:8576001-10540567
+-scaffold_158:1-520055
+scaffold_88:1-1716024
+#+end_src
+
+**** Kc_06
+
+#+name: Kc_06.curated
+#+begin_src lst
+scaffold_1:30600000-30880000
+-scaffold_4:1-1902000
+scaffold_54:1-2797020
+-scaffold_126:1-844186
+scaffold_46:2389001-3246299
+-scaffold_118:42001-1060247
+-scaffold_118:1-42000
+scaffold_282:2001-54852
+scaffold_30:1-4497056
+-scaffold_90:913001-1690000
+scaffold_9:1351001-2451000
+-scaffold_78:1-1966265
+-scaffold_183:1001-183000
+-scaffold_16:6353001-6947706
+-scaffold_5:1600001-1950000
+-scaffold_16:2664001-3348000
+-scaffold_20:3848001-6340061
+-scaffold_20:2860001-3848000
+scaffold_230:2001-90367
+-scaffold_20:1-960000
+-scaffold_46:1094501-2389000
+-scaffold_46:1-1094500
+-scaffold_152:1-558117
+-scaffold_93:1-1649224
+-scaffold_11:3850000-4200001
+-scaffold_12:2155442-2905441
+-scaffold_35:3907001-4167091
+scaffold_60:1-2589450
+scaffold_27:1-1247000
+scaffold_55:1-2793890
+scaffold_271:1-57957
+scaffold_70:1-2339735
+scaffold_169:1-208000
+-scaffold_128:1-823178
+scaffold_160:1-475450
+scaffold_16:1-2664000
+-scaffold_16:3549001-5679000
+scaffold_89:1549001-1712813
+-scaffold_102:1-1377347
+scaffold_67:1-2470057
+-scaffold_154:59001-536543
+-scaffold_365:1-34519
+-scaffold_154:7001-59000
+scaffold_94:1-1637721
+scaffold_39:3578001-4034198
+-scaffold_153:1-552159
+-scaffold_181:1001-324024
+scaffold_34:1-4177888
+-scaffold_81:1-1903455
+scaffold_89:774501-1549000
+#+end_src
+
+**** Kc_07
+
+#+name: Kc_07.curated
+#+begin_src lst
+-scaffold_32:1-4087000
+scaffold_413:1-29247
+-scaffold_39:1-3578000
+-scaffold_96:1273001-1420000
+-scaffold_96:33001-1273000
+-scaffold_87:1-1726039
+scaffold_25:3734001-5027652
+scaffold_15:1-381616
+scaffold_15:601617-7021616
+scaffold_80:61001-1920880
+-scaffold_61:79001-2344000
+-scaffold_61:1-79000
+scaffold_460:1-25676
+-scaffold_74:1-2223349
+-scaffold_18:1-6590000
+-scaffold_129:500001-806988
+scaffold_147:1-595244
+-scaffold_71:1-2295017
+scaffold_317:1-44486
+-scaffold_66:8001-2485769
+scaffold_73:1871001-2233482
+-scaffold_69:514001-1849000
+#+end_src
+
+**** Kc_08
+
+#+name: Kc_08.curated
+#+begin_src lst
+-scaffold_149:1-390000
+scaffold_114:1-1126264
+-scaffold_97:1-688136
+scaffold_124:1-897792
+scaffold_256:3001-24000
+scaffold_189:1-242634
+-scaffold_11:4561001-9899004
+-scaffold_98:1-1438429
+-scaffold_193:22001-188372
+-scaffold_9:39001-1351000
+-scaffold_5:1950001-14209770
+-scaffold_5:1-1600000
+scaffold_384:2001-32045
+scaffold_117:1-1062636
+scaffold_7:12639001-12894510
+scaffold_23:1-116000
+scaffold_23:116001-5498000
+scaffold_159:1-484936
+scaffold_136:1-742081
+scaffold_23:5498001-5559002
+-scaffold_14:1-7434111
+#+end_src
+
+**** Kc_09
+
+#+name: Kc_09.curated
+#+begin_src lst
+-scaffold_116:1-1077632
+-scaffold_11:4200001-4561000
+-scaffold_11:174001-3850001
+-scaffold_11:124001-174000
+-scaffold_10:1-8451000
+-scaffold_49:1-2933682
+scaffold_52:109001-2868000
+-scaffold_211:1-113890
+scaffold_457:1-25725
+-scaffold_73:849001-1871000
+-scaffold_164:36001-445340
+scaffold_32:4087001-4463430
+scaffold_351:1-36248
+scaffold_137:1-739683
+-scaffold_56:1-2760356
+-scaffold_138:1-720432
+scaffold_35:1-3907000
+scaffold_142:1-643350
+scaffold_127:1-839649
+scaffold_162:1-458352
+-scaffold_41:1-3869889
+scaffold_183:183001-300941
+-scaffold_139:82001-699674
+-scaffold_139:2001-82000
+scaffold_19:1-6451388
+#+end_src
+
+**** Kc_10
+
+#+name: Kc_10.curated
+#+begin_src lst
+-scaffold_112:1-1002716
+scaffold_194:1001-186391
+scaffold_72:1-2278368
+scaffold_25:1-1354000
+scaffold_167:1-438710
+-scaffold_151:1-563149
+-scaffold_304:7001-46928
+-scaffold_204:1-104000
+-scaffold_1:15787001-16528000
+scaffold_174:1-360349
+-scaffold_172:1-375356
+-scaffold_77:1-1999416
+-scaffold_45:1-1076000
+-scaffold_8:7226501-11854000
+-scaffold_8:5726501-7226500
+-scaffold_8:2599001-5726500
+scaffold_4:1902001-16191000
+scaffold_4:16191001-16332000
+scaffold_143:1-639205
+-scaffold_110:23001-1212202
+scaffold_50:1-2933146
+scaffold_132:1-770183
+scaffold_99:172001-1407944
+-scaffold_156:3001-533585
+-scaffold_33:1-4443163
+-scaffold_112:1002717-1176996
+#+end_src
+
+**** Kc_11
+
+#+name: Kc_11.curated
+#+begin_src lst
+-scaffold_48:84001-2832000
+-scaffold_48:1-84000
+scaffold_104:1-74000
+scaffold_104:74001-1344802
+scaffold_40:260001-3766000
+scaffold_40:3766001-3977411
+-scaffold_103:1214001-1365840
+-scaffold_103:1-1214000
+scaffold_24:1-5508576
+-scaffold_166:1-440825
+-scaffold_500:1-22362
+scaffold_145:1-627314
+scaffold_2:1-16625000
+scaffold_2:17000001-18375000
+-scaffold_18:6590001-6777933
+scaffold_75:1-394000
+scaffold_313:1001-45456
+scaffold_2:18375001-24879248
+scaffold_227:2001-25000
+scaffold_227:25001-93964
+-scaffold_190:3001-231135
+-scaffold_58:1420001-1467000
+-scaffold_58:1-1420000
+scaffold_362:1-35131
+scaffold_1:28426001-30600000
+scaffold_1:30880001-33025000
+scaffold_1:33350001-39046237
+#+end_src
+
+**** Kc_12
+
+#+name: Kc_12.curated
+#+begin_src lst
+scaffold_95:1-1506420
+-scaffold_220:1-103102
+scaffold_76:1-2007888
+-scaffold_129:1-500000
+-scaffold_7:12562001-12639000
+-scaffold_7:9666001-12562000
+-scaffold_173:293001-373448
+-scaffold_173:1001-293000
+-scaffold_123:1-923805
+-scaffold_9:2739001-11651567
+-scaffold_29:1-4558140
+scaffold_21:1-6242539
+-scaffold_286:5001-53908
+scaffold_120:1-1022524
+scaffold_15:381615-601616
+-scaffold_115:1-1095273
+-scaffold_135:1-742540
+scaffold_17:1-6797994
+-scaffold_148:340001-590776
+scaffold_148:1-269000
+-scaffold_82:1-1826215
+-scaffold_249:3001-26000
+scaffold_443:1001-26644
+scaffold_68:1-2465710
+-scaffold_109:1-1212558
+#+end_src
+
+**** Kc_13
+
+#+name: Kc_13.curated
+#+begin_src lst
+scaffold_89:1-774500
+-scaffold_180:1001-334795
+scaffold_119:595001-1037003
+-scaffold_58:2585001-2656627
+-scaffold_58:1467001-2585000
+scaffold_202:2001-93000
+scaffold_202:93001-137966
+-scaffold_26:1-4949419
+scaffold_92:1-1654920
+scaffold_7:1-9306000
+-scaffold_84:1-1770986
+-scaffold_177:1-346897
+scaffold_53:1-1068000
+-scaffold_45:1076001-3355216
+-scaffold_97:688137-1496274
+-scaffold_38:1-4039322
+scaffold_165:1-443144
+scaffold_13:1-143000
+scaffold_155:1-535776
+scaffold_12:1-2155441
+scaffold_40:1-260000
+scaffold_12:2905442-9256324
+#+end_src
+
+* dotplots
+
+#+name: copy-data
+#+begin_src shell
+mkdir -p $WORKING/data/
+cp $DIR/0-ref/kirkii.fa data
+cp $DIR/0-ref/D5.fa data
+zcat $DIR/Kokia_kauaiensis_S9/6-curate/assembly_curated/assembly.fasta.gz > data/Kokia_kauaiensis.fa
+zcat $DIR/Kokia_cookei_C69/6-curate/assembly_curated/assembly.fasta.gz > data/Kokia_cookei.fa
+zcat $DIR/Kokia_drynarioides_JFW-HI/3-curate/assembly_curated/assembly.fasta.gz > data/Kokia_drynarioides.fa
+#+end_src
+
+#+name: dotplot-assembly-to-ref
+#+header: :var CPUS=12
+#+begin_src shell
+ml minimap2/2.17 gcc/11.3.0 r/4.0.2
+export WORKING CPUS
+mkdir -p $WORKING/plot/; cd $WORKING/plot/
+
+dotplot () {
+    local ASSEMBLY=$1
+    local REFERENCE=$2
+    echo "Plotting $ASSEMBLY to $REFERENCE"
+
+    OUT=$(basename $ASSEMBLY .fa).$(basename $REFERENCE .fa)
+    minimap2 -x asm5 \
+        -t $CPUS \
+        $REFERENCE \
+        $ASSEMBLY \
+        > $OUT.paf
+
+    Rscript $DIR/apps/dotplot/pafCoordsDotPlotly.R \
+     -i $OUT.paf \
+     -o $OUT \
+     -m 20000 \
+     -q 20000 \
+     -p 12 \
+     -x -s -l
+}
+
+export -f dotplot
+
+for ASSEMBLY in $(ls -1 $WORKING/data | grep -v D5); do
+    dotplot $WORKING/data/$ASSEMBLY $WORKING/data/D5.fa
+done
+#+end_src
