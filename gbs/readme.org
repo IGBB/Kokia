@@ -1,114 +1,73 @@
 #+TITLE: GBS samples
-#+PROPERTY:  header-args :var DIR=(file-name-directory (file-local-name buffer-file-name))
-
-* Dried Tissue
-
-| IGBB sample ID | Species            | Line ID          |
-|----------------+--------------------+------------------|
-| Kd-3041        | Kokia drynarioides | HA-PWM-A_3041    |
-| Kd-3042        | Kokia drynarioides | HA-PWM-A_3042    |
-| Kd-3043        | Kokia drynarioides | HA-PWM-A_3043    |
-| Kc-F1          | Kokia cookei       | MO-LCC-F1        |
-| Kc-0001        | Kokia cookei       | MA-AH1-A-0001    |
-| Kc-01/01       | Kokia cookei       | MA-AH1-A # 01/01 |
-| Kc-02          | Kokia cookei       | MA-AH1-A # 02    |
-| Kc-03          | Kokia cookei       | MA-AH1-A # 03    |
-| Kc-04          | Kokia cookei       | MA-AH1-A # 04    |
-| Kc-05          | Kokia cookei       | MA-AH1-A # 05    |
-| Kc-06          | Kokia cookei       | MA-AH1-A # 06    |
-| Kc-07          | Kokia cookei       | MA-AH1-A # 07    |
-| Kc-08          | Kokia cookei       | MA-AH1-A # 08    |
-| Kc-09          | Kokia cookei       | MA-AH1-A # 09    |
-| Kc-10          | Kokia cookei       | MA-AH1-A # 10    |
-| Kc-11          | Kokia cookei       | MA-AH1-A # 11    |
-
-* DNA
-
-|         Sample ID | Species                   |
-|-------------------+---------------------------|
-|              3148 | Kokia cookei              |
-|              3149 | Kokia drynarioides        |
-|              3150 | Kokia drynarioides        |
-|              3151 | Kokia kauaiensis          |
-|              3152 | Kokia kauaiensis          |
-|              3153 | Kokia kauaiensis          |
-|              3154 | Kokia kauaiensis          |
-|              3155 | Kokia kauaiensis          |
-|              3162 | Kokia kauaiensis          |
-|              3163 | Kokia kauaiensis          |
-|              3156 | Kokia kauaiensis          |
-|              3157 | Kokia kauaiensis          |
-|              3158 | Kokia kauaiensis          |
-|              3159 | Kokia kauaiensis          |
-|              3160 | Kokia kauaiensis          |
-|            3160_2 | Kokia kauaiensis          |
-|              3161 | Kokia kauaiensis          |
-|              3162 | Kokia kauaiensis          |
-|              3163 | Kokia kauaiensis          |
-|              3164 | Kokia kauaiensis          |
-|              3165 | Kokia kauaiensis          |
-|              3166 | Kokia kauaiensis          |
-|              3167 | Kokia kauaiensis          |
-|              3168 | Kokia kauaiensis          |
-| 3160_re-extracted | Kokia kauaiensis          |
-|              3169 | Kokia kauaiensis          |
-|              3170 | Kokia kauaiensis          |
-|              3171 | Kokia kauaiensis          |
-|              3172 | Kokia kauaiensis          |
-|              3172 | Kokia kauaiensis          |
-|              3174 | Kokia kauaiensis          |
-|              3175 | Kokia kauaiensis          |
-|              3176 | Kokia kauaiensis          |
-|   3164_re_extract | Kokia kauaiensis          |
-|              3177 | Kokia kauaiensis          |
-|              3178 | Kokia kauaiensis          |
-|              3179 | Kokia kauaiensis          |
-|              3180 | Kokia kauaiensis          |
-|              3181 | Kokia kauaiensis          |
-|              3182 | Kokia kauaiensis          |
-|              3183 | Kokia kauaiensis          |
-|              3184 | Kokia kauaiensis          |
-|   3169_re-extract | Kokia kauaiensis          |
-|              3185 | Kokia kauaiensis          |
-|              3186 | Kokia kauaiensis          |
-|              3187 | Kokia kauaiensis          |
-|              3188 | Kokia kauaiensis          |
-|              3189 | Kokia kauaiensis          |
-|              3190 | Kokia kauaiensis          |
-|              3191 | Kokia kauaiensis          |
-|              3192 | Kokia kauaiensis          |
-|   3170_re-extract | Kokia kauaiensis          |
-|              3193 | Kokia kauaiensis          |
-|              3194 | Kokia kauaiensis          |
-|              3195 | Kokia kauaiensis          |
-|              3215 | Kokia kauaiensis          |
-|              8046 | Kokia sp. cf.drynarioides |
-|              3330 | Kokia kauaiensis          |
-|              3331 | Kokia kauaiensis          |
-|              3332 | Kokia kauaiensis          |
-|              3333 | Kokia kauaiensis          |
-|               283 | Kokia drynarioides        |
-|              1780 | Kokia drynarioides        |
-|              4372 | Kokia cookei              |
-|              4373 | Kokia cookei              |
+#+PROPERTY:  header-args :var DIR=(my/dir) :eval no-export :exports both
 
 
+* Cutadapt
+  Using cutadapt v4.3 to remove illumina adapters
+  #+header: :var names=0-raw/readme.org:illumina[,0]
+  #+header: :var fwd=0-raw/readme.org:illumina[,1]
+  #+header: :var rev=0-raw/readme.org:illumina[,2]
+  #+begin_src shell :tangle 1-filter/illumina.sh
+ml python/3.9.2
+PATH=$HOME/.local/bin:$PATH
+
+TRUSEQ_FWD=AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+TRUSEQ_REV=AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+parallel --eta --xapply cutadapt \
+    -a $TRUSEQ_FWD -A $TRUSEQ_REV \
+    -o $DIR/1-filter/{1}.R1.fq.gz -p $DIR/1-filter/{1}.R2.fq.gz \
+    $DIR/0-raw/{2} $DIR/0-raw/{3} '>' $DIR/1-filter/{1}.log \
+    ::: "${names[@]}" ::: "${fwd[@]}" ::: "${rev[@]}"
+  #+end_src
+
+ Plot log info
+ #+header: :results output graphics file :file 1-filter/trim-len.png
+ #+header: :width 8 :height 4 :res 100 :units in :bg white
+  #+begin_src R
+library(tidyverse)
+
+row_to_colnames <- function(df) {
+  names(df) <- as.character(unlist(df[1,]))
+  df[-1,]
+}
+
+read.cutadapt <- function(log.file) {
+con <- file(log.file)
+lines <- readLines(con)
+close.connection(con)
+sections <- cumsum(grepl("^===", lines))
+tabs <- grepl("\t", lines)
+
+data <- lapply(split(lines[tabs], sections[tabs]), str_split_fixed, pattern="\t", n=5) %>%
+  lapply(as.data.frame) %>%
+  lapply(row_to_colnames) %>%
+  setNames(c('Fwd', 'Rev')) %>%
+  bind_rows(.id='Read') %>%
+  mutate_at(c("length", "count", "expect", "max.err"), as.numeric)
+
+}
+
+log <- list.files("1-filter", ".log", full.names = T) %>%
+  setNames(sub(".log", "", basename(.))) %>%
+  lapply(read.cutadapt) %>%
+  bind_rows(.id="log")
+
+ggplot(log, aes(length, count, color=Read, group=length)) +
+  geom_boxplot() +
+  scale_x_continuous(trans='reverse', labels=function(x) 150-x) +
+  scale_y_continuous(labels=scales::label_number_si()) +
+  facet_grid(Read~.) +
+  theme_minimal()
+  #+end_src
+
+  #+RESULTS:
+  [[file:1-filter/trim-len.png]]
 
 * Align
 
-#+NAME: kd-gbs
-| Name       | Forward                                                 | Reverse                                                 |
-|------------+---------------------------------------------------------+---------------------------------------------------------|
-| Kd_3041    | Kd_3041/Kd_3041_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3041/Kd_3041_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
-| Kd_3042    | Kd_3042/Kd_3042_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3042/Kd_3042_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
-| Kd_3043    | Kd_3043/Kd_3043_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kd_3043/Kd_3043_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
-| Kd_JW      | Kd_JW/Kd_JW_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz       | Kd_JW/Kd_JW_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz       |
-| Kd_JW_ng   | Kd_JW_ng/Kd_JW_ng_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz | Kd_JW_ng/Kd_JW_ng_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz |
-| SRR6195040 | SRR6195040/SRR6195040_1.fastq.gz                        | SRR6195040/SRR6195040_2.fastq.gz                        |
-| Kk_19S8    | Kk_19S8/Kk_19S8_CKDL220020121-1A_HCWYNDSX5_L1_1.fq.gz   | Kk_19S8/Kk_19S8_CKDL220020121-1A_HCWYNDSX5_L1_2.fq.gz   |
-
-- Create bwa database for assembly
-  #+begin_src sh :tangle 1-align/0-ref.kd.sh
+** Create bwa database for assembly
+  #+begin_src sh :tangle 2-align/0-ref.kd.sh
 ROOT=$(git rev-parse --show-toplevel)
 
 ml singularity
@@ -125,11 +84,13 @@ fasta=$DIR/0-ref/Kd.contigs.fa
 bwa index -a bwtsw $fasta
 samtools faidx $fasta
   #+end_src
-- Align to contigs
-  #+header: :var data=kd-gbs[8:9,]
-  #+begin_src sh :tangle 1-align/1-bwa.sh
+
+
+** Align to contigs
+  #+header: :var names=0-raw/readme.org:illumina[,0]
+  #+begin_src sh :tangle 2-align/1-bwa.sh
 ROOT=$(git rev-parse --show-toplevel)
-RAW=$(realpath $DIR/0-raw/)
+name="${names[$SLURM_ARRAY_TASK_ID]}"
 
 ml singularity
 bwa () {
@@ -141,26 +102,62 @@ samtools () {
         /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
         samtools $@
 }
-PATH=$PATH:$ROOT/wgs/1-assembly/apps/samblaster-v.0.1.26/
+PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
 
 fasta=$DIR/0-ref/Kd.contigs.fa
-for name in "${!data[@]}"; do
-    readarray -t libs <<< "${data[$name]}"
 
-    bwa mem -t 48 $fasta $RAW/${libs[0]} $RAW/${libs[1]} |
-        samblaster |
-        samtools view -bS |
-        samtools sort -m200G -o $DIR/1-align/$name.bam -
-done
-
+bwa mem -t 20 $fasta $DIR/1-filter/$name.R1.fq.gz $DIR/1-filter/$name.R2.fq.gz |
+    samblaster |
+    samtools view -bS |
+    samtools sort -m 35G -o $DIR/2-align/$name.bam -
   #+end_src
+*** Stats
+#+header: :var names=0-raw/readme.org:illumina[,0]
+#+begin_src bash :dir (symbol-value 'ssh-deploy-root-remote)
+for i in {0..162}; do
+sed -e '/samblaster: -----/d' \
+    -e '/samblaster: Pair/,/samblaster: Total/s/samblaster: //p' \
+    -n $DIR/slurm-155609_$i.out |
+    sed 's/\(Pair\|Both\) /\1_/' |
+    awk 'NR == 1 {for(i=2; i < NF; i++) h[i]=$i;}
+        NR > 1 {for(i=2; i < NF; i++) print name, $1, h[i], $i;}' \
+            name=${names[$i]} OFS="\t"
+done > $DIR/2-align/stats.txt
+#+end_src
 
-* Coverage
-- Calculate Base Depth
-  #+header: :var data=kd-gbs[8,0]
-  #+begin_src sh :tangle 2-coverage/1-depth.sh
+#+RESULTS:
+#+header: :results output graphics file :file align.stats.png
+#+header: :width 15 :height 5 :units in :res 72
+#+begin_src R
+library(tidyverse)
+
+
+read.delim("2-align/stats.txt", header=F,
+           col.names = c("Sample", "Type", "Stat", "Value")) %>%
+  filter(Type %in% c("Both_Mapped", "Total") & Stat == "Type_ID_Count") %>%
+  select(-Stat) %>%
+  spread(Type, Value) %>%
+  mutate(Sample=fct_reorder(factor(Sample), Total),
+         Species = substr(Sample, 0, 2)) %>%
+  ggplot(aes(Sample, Both_Mapped, color=Species, shape=Species)) +
+  geom_linerange(aes(ymax=Total, ymin=Both_Mapped)) +
+  geom_point() +
+  scale_y_continuous(breaks=seq(15, by=15, length.out=4)*560000000/300,
+                       labels = function(x)
+                         sprintf("%0.2fX", x * 300 / 560000000)) +
+  theme_minimal() +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+        legend.position = 'top')
+#+end_src
+
+#+RESULTS:
+[[file:align.stats.png]]
+
+** Coverage
+  #+header: :var names=0-raw/readme.org:illumina[,0]
+  #+begin_src sh :tangle 2-align/2-coverage.sh
 ROOT=$(git rev-parse --show-toplevel)
-export DIR ROOT
+name="${names[$SLURM_ARRAY_TASK_ID]}"
 
 ml singularity
 samtools () {
@@ -168,19 +165,14 @@ samtools () {
         /apps/singularity-3/samtools/samtools-v1.9-4-deb_cv1.sif \
         samtools $@
 }
-export -f samtools
 
-parallel --eta samtools depth $DIR/1-align/{}.bam \
-    '>' $DIR/2-coverage/{}.depth ::: "${data[@]}"
-
+samtools depth $DIR/2-align/$name.bam > $DIR/2-align/$name.depth
   #+end_src
 
 * Variant calling
-
-#+header: :var data=kd-gbs[,0]
+#+header: :var names=0-raw/readme.org:illumina[,0]
 #+begin_src sh :tangle 3-variants/1-call.sh
 ROOT=$(git rev-parse --show-toplevel)
-RAW=$(realpath $DIR/0-raw/)
 
 ml singularity
 bcftools () {
@@ -191,28 +183,74 @@ bcftools () {
 
 fasta=$DIR/0-ref/Kd.contigs.fa
 
-bcftools mpileup -Ou -f $fasta $(printf "$DIR/1-align/%s.bam " "${data[@]}") |
-    bcftools call -vmO z -o 3-variants/all.vcf.gz
+bcftools mpileup -Ou -R <(split -nr/${SLURM_ARRAY_TASK_ID}/50 $fasta.fai | cut -f1) -f $fasta \
+    $(printf "$DIR/2-align/%s.bam " "${names[@]}") |
+    bcftools call -vmO z -o 3-variants/all.${SLURM_ARRAY_TASK_ID}.vcf.gz
 
 #+end_src
 
-#+NAME: plot-pca
-#+HEADER: :results output graphics file  :width 800 :height 600 :noweb yes
-#+begin_src R :file kd-samples.png :var vcf='3-variants/kd.vcf'
+#+begin_src sh :tangle 3-variants/2-merge.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+ml singularity
+bcftools () {
+    singularity exec -B $ROOT \
+        /apps/singularity-3/bcftools/bcftools-1.9.sif \
+        bcftools "$@"
+}
+
+bcftools concat 3-variants/all.{1..50}.vcf.gz > 3-variants/all.combined.vcf
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src R :tangle 3-variants/3-pca.joint.R
 library(tidyverse)
 library(SNPRelate)
 library(SeqArray)
 library(ggrepel)
 
-vcf <- scan(text=vcf, what="character", allowEscapes = T)
-
 # Using SeqArray converter instead of SNPRelate's
-seqVCF2GDS(vcf, 'all.gds')
-genofile <- seqOpen('all.gds')
+seqVCF2GDS("3-variants/all.combined.vcf", '3-variants/all.gds')
+genofile <- seqOpen('3-variants/all.gds')
 # Run PCA using SNPRelate
 #snpgdsVCF2GDS(vcf, 'all.gds', method='biallelic.only')
 #genofile <- snpgdsOpen('all.gds')
 pca <- snpgdsPCA(genofile, autosome.only=F, num.thread=48)
+pc.percent <- pca$varprop*100
+
+saveRDS(pca, '3-variants/all.pca.Rdata')
+
+## Grab relevent data
+## data <- data.frame(Library.ID = pca$sample.id,
+##     EV1 = pca$eigenvect[,1],    # the first eigenvector
+##     EV2 = pca$eigenvect[,2],    # the second eigenvector
+##     stringsAsFactors = FALSE) %>%
+##   mutate(label = basename(Library.ID),
+##          shape = sub("_.*", "", label))
+
+## # Plot PCA, labeling outliers
+## p <- ggplot(data, aes(x=EV1, y=EV2, color=shape)) +
+##   geom_point() +
+##   geom_label_repel(aes(label=label)) +
+##   scale_shape_manual(values=c(20, 4)) +
+##   xlab(sprintf("PC 1 (%0.2f%%)", pc.percent[1])) +
+##   ylab(sprintf("PC 2 (%0.2f%%)", pc.percent[2])) +
+##   theme_minimal()
+## p
+#+end_src
+
+
+#+NAME: plot-pca
+#+HEADER: :results output graphics file :file pca.png
+#+HEADER: :width 8 :height 6 :units in :res 300
+#+begin_src R :session pca
+library(tidyverse)
+library(ggrepel)
+library(ggpp)
+
+pca <- readRDS('3-variants/all.pca.Rdata')
 pc.percent <- pca$varprop*100
 
 ## Grab relevent data
@@ -220,17 +258,38 @@ data <- data.frame(Library.ID = pca$sample.id,
     EV1 = pca$eigenvect[,1],    # the first eigenvector
     EV2 = pca$eigenvect[,2],    # the second eigenvector
     stringsAsFactors = FALSE) %>%
-  mutate(label = basename(Library.ID))
+  mutate(name = sub(".bam$", "", basename(Library.ID)),
+         color = sub("_.*", "", name),
+         shape = 'original') %>%
+  filter(!name %in% c("Kk_3171", "Kc_A_1_1") )
+
+
+data[data$name %in% sprintf("Kk_%d", c(3156:3160)), 'color'] <- 'Kc'
+data[data$name %in% sprintf("Kk_%d", c(3156:3160)), 'shape'] <- 'change'
+
+data[data$name %in% "SRR6195040", 'color'] <- 'Kd'
+data[data$name %in% "SRR6195040", 'shape'] <- 'change'
+
+data[data$name %in% c("Kd_HAVO_1a", "Kd_HAVO_1b", "Kk_3155"), 'label'] <-
+     c("Kd_HAVO_1a", "Kd_HAVO_1b", "Kk_3155")
 
 # Plot PCA, labeling outliers
-p <- ggplot(data, aes(x=EV1, y=EV2)) +
+p <- ggplot(data, aes(x=EV1, y=EV2, shape=shape, color=color, label=label)) +
   geom_point() +
-  geom_label_repel(aes(label=label)) +
-  scale_shape_manual(values=c(20, 4)) +
+  geom_label_repel(max.overlaps = Inf,
+                   position = position_nudge_center(x=-0.02, y=0.01)) +
+  scale_shape_manual(values=c(4, 20)) +
+  guides(shape='none') +
   xlab(sprintf("PC 1 (%0.2f%%)", pc.percent[1])) +
   ylab(sprintf("PC 2 (%0.2f%%)", pc.percent[2])) +
   theme_minimal()
+
+#plotly::ggplotly(p  )
+
 p
 #+end_src
+
+#+RESULTS: plot-pca
+[[file:pca.png]]
 
 [[file:all-samples.png]]
