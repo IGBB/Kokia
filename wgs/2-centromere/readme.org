@@ -1,0 +1,648 @@
+#+title: Centromere Location
+#+PROPERTY:  header-args :var DIR=(my/dir)
+
+The centromere locations have been shown to be hypomethylated
+surrounded by regions of hypermethylations in mouse ([[https://doi.org/10.1371%2Fjournal.pgen.0020017][Wong et
+al. 2006]]), arabidobisis and maize ([[https://academic.oup.com/plcell/article/20/1/25/6091186][Zhang, et al. 2008]]), and medaka
+([[https://www.nature.com/articles/s41467-017-01982-7][Ichikawa, et al. 2017]]). The inter-chromosome interactions found in
+the Hi-C data peak around the centromere ([[https://academic.oup.com/nar/article/43/11/5331/1171025][Varoquaux, et al. 2015]]) as
+well. Combining the two datasets may give a better picture of the
+centromeres.
+
+#+begin_quote
+Here, we report that the 178-bp repeats associated with the
+CENH3-containing chromatin (CEN chromatin) are hypomethylated compared
+with the same repeats located in the flanking pericentromeric
+regions. A similar hypomethylation of DNA in CEN chromatin was also
+revealed in maize (Zea mays).
+
+
+Wenli Zhang, Hye-Ran Lee, Dal-Hoe Koo, Jiming Jiang, Epigenetic
+Modification of Centromeric Chromatin: Hypomethylation of DNA
+Sequences in the CENH3-Associated Chromatin in Arabidopsis thaliana
+and Maize, The Plant Cell, Volume 20, Issue 1, January 2008, Pages
+25–34, https://doi.org/10.1105/tpc.107.057083
+#+end_quote
+
+#+begin_quote
+[W]e uncover centromeres are mostly hypermethylated but have
+hypomethylated sub-regions that acquire unique sequence compositions
+independently.
+
+Ichikawa, K., Tomioka, S., Suzuki, Y. et al. Centromere evolution and
+CpG methylation during vertebrate speciation. Nat Commun 8, 1833
+(2017). https://doi.org/10.1038/s41467-017-01982-7
+#+end_quote
+
+#+begin_quote
+The observed hypermethylation was consistent with the presence of a
+presumed transcriptionally silent chromatin state at the
+neocentromere. Within this neocentric chromatin, specific sites of
+active transcription and the centromeric chromatin boundary are
+defined by DNA hypomethylation.
+
+Wong NC, Wong LH, Quach JM, Canham P, Craig JM, Song JZ, Clark SJ,
+Choo KH. Permissive transcriptional activity at the centromere through
+pockets of DNA hypomethylation. PLoS Genet. 2006 Feb;2(2):e17. doi:
+10.1371/journal.pgen.0020017. Epub 2006 Feb 10. PMID: 16477312; PMCID:
+PMC1361766.
+#+end_quote
+
+* Methylation
+** Kc
+- extract files and create file lists
+  #+header: :var flowcells=../0-raw/readme.org:kc-nanopore-runs
+   #+begin_src sh :tangle kc/1-meth/fast5/extract.sh
+    RAW=$(realpath $DIR/../0-raw/)
+
+    cat <<<"$flowcells" |
+        while read ID LOC; do
+            for file in $RAW/$LOC/fast5_{all,tmp}.tar; do
+                [ -e $file ] && echo $file
+            done
+        done |
+        parallel -j 4 --eta tar --strip=1 --show-transformed \
+                 -C $DIR/kc/1-meth/fast5/ -vxf {} '*.fast5' |
+        awk '{printf "%s/kc/1-meth/fast5/%s\n", dir, $0}' \
+            dir=$DIR > $DIR/kc/1-meth/fast5/files.lst
+  #+end_src
+
+- Run (MIG)
+  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=64Gb --array=1-90 --time=36:00:00"
+    #+begin_src sh :tangle kc/1-meth/2-split/call.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
+    mkdir $SCRATCH
+
+    zcat $DIR/../1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz \
+         > $SCRATCH/Kc.fa
+    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kc/1-meth/fast5/files.lst |
+        xargs cp -v -t $SCRATCH
+
+    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
+    PATH=$DORADO_DIR/bin/:$PATH
+    model="$DORADO_DIR/models/dna_r10.4.1_e8.2_260bps_sup@v4.1.0"
+
+    dorado basecaller $model $SCRATCH \
+        --reference $SCRATCH/Kc.fa \
+        --modified-bases 5mCG_5hmCG \
+        > $DIR/kc/1-meth/2-split/Kc.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
+#+end_src
+
+- Combine and Sort
+  #+begin_src sh :tangle kc/1-meth/3-combine.sh
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    samtools cat $DIR/kc/1-meth/2-split/Kc.5mCG-5hmCG.{1..90}.bam |
+        samtools sort -m 500G -o $DIR/kc/1-meth/3-combine.kc.bam -
+    samtools index $DIR/kc/1-meth/3-combine.kc.bam
+#+end_src
+
+- ModBam2Bed
+  #+begin_src sh :tangle kc/1-meth/4-modbam2bed.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+    PATH=$DIR/apps/modbam2bed/:$PATH
+
+    zcat $DIR/../1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz \
+         > $SCRATCH/Kc.fa
+
+     modbam2bed --aggregate -p $DIR/kc/1-meth/4-full.modbam \
+                -e --combine --cpg --chh --chg -t 48 \
+                 $SCRATCH/Kc.fa $DIR/kc/1-meth/3-combine.kc.bam
+#+end_src
+
+** Kk
+- extract files and create file lists
+  #+header: :var flowcells=../0-raw/readme.org:kk-nanopore-runs
+   #+begin_src sh :tangle kk/1-meth/fast5/extract.sh
+    RAW=$(realpath $DIR/../0-raw/)
+
+    cat <<<"$flowcells" |
+        while read ID LOC; do 
+            tar --strip=1 --show-transformed \
+                -C $DIR/kk/1-meth/fast5/ -vxf $RAW/$LOC/fast5_all.tar '*.fast5'
+        done |
+        awk '{printf "%s/kk/1-meth/fast5/%s\n", dir, $0}' \
+            dir=$DIR > $DIR/kk/1-meth/fast5/files.lst
+  #+end_src
+
+- Run (MIG)
+  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=64Gb --array=1-90 --time=36:00:00"
+    #+begin_src sh :tangle kk/1-meth/2-split/call.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
+    mkdir $SCRATCH
+
+    zcat $DIR/../1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz \
+         > $SCRATCH/Kk.fa
+    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kk/1-meth/fast5/files.lst |
+        xargs cp -v -t $SCRATCH
+
+    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
+    PATH=$DORADO_DIR/bin/:$PATH
+    model="$DORADO_DIR/models/dna_r10.4.1_e8.2_260bps_sup@v4.1.0"
+
+    dorado basecaller $model $SCRATCH \
+        --reference $SCRATCH/Kk.fa \
+        --modified-bases 5mCG_5hmCG \
+        > $DIR/kk/1-meth/2-split/Kk.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
+#+end_src
+
+- Combine and Sort
+  #+begin_src sh :tangle kk/1-meth/3-combine.sh
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    samtools cat $DIR/kk/1-meth/2-split/Kk.5mCG-5hmCG.{1..90}.bam |
+        samtools sort -m 500G -o $DIR/kk/1-meth/3-combine.kk.bam -
+    samtools index $DIR/kk/1-meth/3-combine.kk.bam
+#+end_src
+
+- ModBam2Bed
+  #+begin_src sh :tangle kk/1-meth/4-modbam2bed.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+    PATH=$DIR/apps/modbam2bed/:$PATH
+
+    zcat $DIR/../1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz \
+         > $SCRATCH/Kk.fa
+
+     modbam2bed --aggregate -p $DIR/kk/1-meth/4-full.modbam \
+                -e --combine --cpg --chh --chg -t 48 \
+                 $SCRATCH/Kk.fa $DIR/kk/1-meth/3-combine.kk.bam
+#+end_src
+
+** Kd
+- extract files and create file lists
+  #+header: :var flowcells=../0-raw/readme.org:kd-nanopore-runs
+   #+begin_src sh :tangle kd/1-meth/fast5/extract.sh
+    RAW=$(realpath $DIR/../0-raw/)
+
+    cat <<<"$flowcells" |
+        while read ID LOC; do
+            for file in $RAW/$LOC/fast5_{pass,fail,skip}.tar; do
+                [ -e $file ] && echo $file
+            done
+        done |
+        parallel -j 4 --eta tar --strip=1 --show-transformed \
+                -C $DIR/kd/1-meth/fast5/ -vxf {} '*.fast5' |
+        awk '{printf "%s/kd/1-meth/fast5/%s\n", dir, $0}' \
+            dir=$DIR > $DIR/kd/1-meth/fast5/files.lst
+  #+end_src
+
+- Run (MIG)
+  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=128Gb --array=1-90 --time=36:00:00"
+        #+begin_src sh :tangle kd/1-meth/2-split/call.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
+    mkdir $SCRATCH
+
+    ml python/3.9
+
+    zcat $DIR/../1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz \
+         > $SCRATCH/Kd.fa
+    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kd/1-meth/fast5/files.lst |
+        grep -v '^#' |
+        while read file; do
+             h5_validate multi_read_fast5.yaml $file > /dev/null &&
+                 echo $file
+        done |
+        xargs cp -v -t $SCRATCH
+
+    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
+    PATH=$DORADO_DIR/bin/:$PATH
+    model="$DORADO_DIR/models/dna_r9.4.1_e8_sup@v3.3"
+
+    dorado basecaller $model $SCRATCH \
+        --reference $SCRATCH/Kd.fa \
+        --modified-bases 5mCG_5hmCG \
+        > $DIR/kd/1-meth/2-split/Kd.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
+#+end_src
+
+- Combine and Sort
+  #+begin_src sh :tangle kd/1-meth/3-combine.sh
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    samtools cat $DIR/kd/1-meth/2-split/Kd.5mCG-5hmCG.{1..90}.bam |
+        samtools sort -m 500G -o $DIR/kd/1-meth/3-combine.kd.bam -
+    samtools index $DIR/kd/1-meth/3-combine.kd.bam
+#+end_src
+
+- ModBam2Bed
+  #+begin_src sh :tangle kd/1-meth/4-modbam2bed.sh
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+    PATH=$DIR/apps/modbam2bed/:$PATH
+
+    zcat  $DIR/../1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz  \
+         > $SCRATCH/Kd.fa
+
+     modbam2bed --aggregate -p $DIR/kd/1-meth/4-full.modbam \
+                -e --combine --cpg --chh --chg -t 48 \
+                 $SCRATCH/Kd.fa $DIR/kd/1-meth/3-combine.kd.bam
+#+end_src
+
+* Hi-C inter-chr interactions
+
+** Kk
+- Create database
+  #+begin_src sh :tangle kk/2-hic/0-db.sh
+    ROOT=$(git rev-parse --show-toplevel)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    fasta=$ROOT/wgs/1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
+    bwa index -a bwtsw -p $DIR/kk/2-hic/Kk.db $fasta
+    samtools faidx $fasta
+  #+end_src
+
+- Align Hi-C data to assembly
+  #+begin_src sh :tangle kk/2-hic/1-bwa.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    RAW=$(realpath $ROOT/wgs/0-raw/)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+    bwa mem -5SP -t 48 $DIR/kk/2-hic/Kk.db \
+        $RAW/Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_{1,2}.fq.gz |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kk/2-hic/Kk.bam
+  #+end_src
+
+- Get off chr contact from hic
+  #+begin_src sh  :tangle kk/2-hic/2-offtarget.sh
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+    samtools view -h  $DIR/kk/2-hic/Kk.bam |
+        awk '$7 != "="' |
+        samtools view -Sb - |
+        samtools sort -m 60G -o $DIR/kk/2-hic/Kk-interchr.bam -
+
+    samtools index $DIR/kk/2-hic/Kk-interchr.bam
+  #+end_src
+
+** Kd
+- Create database
+  #+begin_src sh :tangle kd/2-hic/0-db.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    ASM_DIR=$ROOT/wgs/1-assembly
+    
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    fasta=$ASM_DIR/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz
+    bwa index -a bwtsw -p $DIR/kd/2-hic/Kd.db $fasta
+    samtools faidx $fasta
+  #+end_src
+
+- Align Hi-C data to assembly
+  #+begin_src sh :tangle kd/2-hic/1-bwa.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    RAW=$(realpath $ROOT/wgs/0-raw/)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+    bwa mem -5SP -t 48 $DIR/kd/2-hic/Kd.db \
+        $RAW/kd/hi-c/kokia_S3HiC_R{1,2}.fastq.gz |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kd/2-hic/Kd.bam
+  #+end_src
+
+- Get off chr contact from hic
+  #+begin_src sh  :tangle kd/2-hic/2-offtarget.sh
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+    samtools view -h  $DIR/kd/2-hic/Kd.bam |
+        awk '$7 != "="' |
+        samtools view -Sb - |
+        samtools sort -m 60G -o $DIR/kd/2-hic/Kd-interchr.bam -
+
+    samtools index $DIR/kd/2-hic/Kd-interchr.bam
+  #+end_src
+
+** Kc
+- Create database
+  #+begin_src sh :tangle kc/2-hic/0-db.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    ASM_DIR=$ROOT/wgs/1-assembly
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    fasta=$ASM_DIR/Kokia_cookei_C69/Kokia_cookei.fasta.gz
+    bwa index -a bwtsw -p $DIR/kc/2-hic/Kc.db $fasta
+  #+end_src
+
+- Align Hi-C data to assembly
+  #+begin_src sh :tangle kc/2-hic/1-bwa.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    RAW=$(realpath $ROOT/wgs/0-raw/)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+    bwa mem -5SP -t 48 $DIR/kc/2-hic/Kc.db \
+        $RAW/Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_{1,2}.fq.gz |
+        samblaster |
+        samtools view -bS -F 2316 > $DIR/kc/2-hic/Kc.bam
+  #+end_src
+
+- Get off chr contact from hic
+  #+begin_src sh  :tangle kc/2-hic/2-offtarget.sh
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+    samtools view -h  $DIR/kc/2-hic/Kc.bam |
+        awk '$7 != "="' |
+        samtools view -Sb - |
+        samtools sort -m 60G -o $DIR/kc/2-hic/Kc-interchr.bam -
+
+    samtools index $DIR/kc/2-hic/Kc-interchr.bam
+  #+end_src
+* TRF
+
+** Kk
+#+begin_src sh :tangle kk/3-trf-run.sh
+  ml parallel
+
+  ROOT=$(git rev-parse --show-toplevel)
+  ASM_DIR=$ROOT/wgs/1-assembly
+    
+  PATH=$DIR/apps/samtools-1.17/:$PATH
+  PATH=$DIR/apps/:$PATH
+
+  fasta=$ASM_DIR/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
+
+  zcat $fasta > $DIR/kk/Kk.fa
+  samtools faidx $DIR/kk/Kk.fa
+  
+  cut -f 1 $DIR/kk/Kk.fa.fai |
+  parallel --eta --tag  \
+           samtools faidx $DIR/kk/Kk.fa {} '|' \
+           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
+           > $DIR/kk/3-trf.dat 
+
+#+end_src
+
+** Kd
+#+begin_src sh :tangle kd/3-trf-run.sh
+  ml parallel
+
+  ROOT=$(git rev-parse --show-toplevel)
+  ASM_DIR=$ROOT/wgs/1-assembly
+    
+  PATH=$DIR/apps/samtools-1.17/:$PATH
+  PATH=$DIR/apps/:$PATH
+
+  fasta=$ASM_DIR/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz
+
+  zcat $fasta > $DIR/kd/Kd.fa
+  samtools faidx $DIR/kd/Kd.fa
+  
+  cut -f 1 $DIR/kd/Kd.fa.fai |
+  parallel --eta --tag  \
+           samtools faidx $DIR/kd/Kd.fa {} '|' \
+           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
+           > $DIR/kd/3-trf.dat 
+#+end_src
+
+** Kc
+#+begin_src sh :tangle kc/3-trf-run.sh
+  ml parallel
+
+  ROOT=$(git rev-parse --show-toplevel)
+  ASM_DIR=$ROOT/wgs/1-assembly
+    
+  PATH=$DIR/apps/samtools-1.17/:$PATH
+  PATH=$DIR/apps/:$PATH
+
+  fasta=$ASM_DIR/Kokia_cookei_C69/Kokia_cookei.fasta.gz
+
+  zcat $fasta > $DIR/kc/Kc.fa
+  samtools faidx $DIR/kc/Kc.fa
+
+  cut -f 1 $DIR/kc/Kc.fa.fai |
+  parallel --eta --tag  \
+           samtools faidx $DIR/kc/Kc.fa {} '|' \
+           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
+           > $DIR/kc/3-trf.dat 
+#+end_src
+
+* Figure
+
+- Create 5k windows with a 2.5k slide
+   #+begin_src sh :tangle 0-makewindows.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+    fasta=$ROOT/wgs/1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
+
+    zcat $fasta > $DIR/Kk.fa
+    samtools faidx $DIR/Kk.fa
+
+    bedtools-v2.31.0 makewindows -g $DIR/Kk.fa.fai -w 5000 -s 2500 \
+                     > $DIR/Kk.5k-window-2.5k-slide.bed
+  #+end_src
+- Bedcov for methylation calls
+  #+begin_src sh :tangle 1-meth-bedcov.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    bedtools-v2.31.0 coverage -a $DIR/Kk.5k-window-2.5k-slide.bed \
+                     -b $DIR/1-meth/4-full.modbam.cpg.acc.bed \
+                     > $DIR/1-meth.bedcov
+  #+end_src
+- Bedcov for hic inter-chr interactions
+  #+begin_src sh
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    samtools bedcov $DIR/Kk.5k-window-2.5k-slide.bed \
+              $DIR/2-hic/Kk-interchr.bam > $DIR/2-hic.bedcov
+  #+end_src
+- Tandem repeat locations
+  #+begin_src sh :tangle 3-trf-locations.sh
+    DIR=.
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/:$PATH
+
+    awk '!/@/ { print $1,$2,$3 }' OFS="\t"  $DIR/3-trf.dat |
+        sort -k1,1 -k2,3n |
+        bedtools-v2.31.0 merge -d 250000 -i - > $DIR/3-trf.loc.bed
+
+  #+end_src  
+
+
+#+begin_src R
+    library(tidyverse)
+
+    between.IQR <- function(x) {
+      if(any(is.na(x)))
+        stop("x is missing values")
+      if(!is.numeric(x))
+        stop("x is not numeric")
+      Q3<-quantile(x,0.75)
+      Q1<-quantile(x,0.25)
+      IQR<-(Q3-Q1)
+      left<- (Q1-(1.5*IQR))
+      right<- (Q3+(1.5*IQR))
+      between(x, left, right)
+    }
+
+    chr.sizes <- read.delim("Kk.fa.fai", header=F)
+
+    data.meth <- read.delim("1-meth.map.bed", header=F,
+                            col.names=c("Chr", "Start", "End", "Count",
+                                        "Avg.Read", "Avg.Meth")) %>%
+      mutate_at(vars(-Chr), as.numeric) %>%
+      replace_na(list(Avg.Read=0, Avg.Meth=0)) %>%
+      group_by(Chr) %>%
+      mutate(outlier = !between.IQR(Count))
+
+  ggplot(data.meth, aes(Avg.Read)) + geom_histogram()
+  summary(data.meth$Avg.Read)
+    
+    data.hic <- read.delim("2-hic.bedcov", header=F,
+                           col.names=c("Chr", "Start", "End", "Count",
+                                       "bases", "Length", "Coverage")) %>%
+      mutate_at(vars(-Chr), as.numeric) %>%
+      group_by(Chr) %>%
+      mutate(outlier = !between.IQR(Count))
+
+    data <- list(Methylation=data.meth, HiC=data.hic) %>%
+      lapply(select, Chr, Start, End, Count, outlier) %>%
+      bind_rows(.id="Type")
+
+    max.score.repeats <- read.table("3-trf.loc.bed") %>%
+      select(Chr=V1, Start=V2, End=V3) %>%
+      filter((End - Start) > 50000) %>%
+      mutate(length = End - Start,
+             fltr.start = Start - length,
+             fltr.end = End + length)
+
+    repeats <- read.table("3-trf.dat", header=F, fill=T) %>%
+      select(Chr=V1, Start=V2, End=V3, Size=V4, Count=V5, Score=V9) %>%
+      mutate_at(vars(-Chr), as.numeric) %>% 
+      na.omit
+
+    all.plot <- data %>%
+      pivot_wider(names_from=Type, values_from=c(Count, outlier)) %>%
+      filter(outlier_Methylation & outlier_HiC) %>%
+      ggplot(aes(Chr, Start)) +
+      geom_jitter(width=0.25) +
+        geom_linerange(aes(ymin=Start, ymax=End), repeats,
+                       size=5, color='red') +
+      scale_y_continuous(labels=scales::label_number_si(accuracy=1))+
+      coord_flip() +
+      theme_minimal()
+    all.plot
+
+    plots <- mapply(function(chr, start, end){
+      rep.fltr <- filter(repeats, Chr == chr & between(Start, start, end))
+      meth.fltr <- filter(data.meth, Chr == chr & between(Start, start, end))
+      hic.fltr <- filter(data.hic, Chr == chr & between(Start, start, end))
+      cowplot::plot_grid(
+      ggplot(hic.fltr, aes(Start, Count)) +
+        geom_rect(aes(xmax=Start, xmin=End, ymax=Inf, ymin=-Inf),
+                  rep.fltr,
+                  color='grey', alpha=0.25) +
+        geom_point(aes(color=outlier)) +
+        ggtitle(sprintf("%s:%d-%d", chr, start, end)) +
+        scale_x_continuous(labels=scales::label_number_si(accuracy=0.01),
+                           expand=c(0,0))+
+        theme_minimal(),
+      ggplot() +
+        geom_rect(aes(xmax=Start, xmin=End, ymax=Inf, ymin=-Inf),
+                  rep.fltr,
+                  color='grey', alpha=0.25) +
+        geom_point(aes(Start, Count, color=outlier), meth.fltr ) +
+        ggtitle(sprintf("%s:%d-%d", chr, start, end)) +
+        scale_x_continuous(labels=scales::label_number_si(accuracy=0.01),
+                           expand=c(0,0))+
+      theme_minimal(),
+      ncol=1)},
+      max.score.repeats$Chr,
+      max.score.repeats$fltr.start,
+      max.score.repeats$fltr.end,
+      SIMPLIFY=F) %>%
+      cowplot::plot_grid(plotlist=.)
+    plots
+
+
+
+    cowplot::plot_grid(all.plot, plots, rel_widths=c(1,3))
+
+#+end_src
+
+#+RESULTS:
+
+#+begin_src R
+  library(tidyverse)
+  library(cowplot)
+
+  chr.sizes <- read.delim("Kk.fa.fai", header=F) %>%
+    select(Chr=V1, Size=V2)
+
+  data.meth <- read.delim("1-meth.high.bed", header=F,
+                          col.names=c("Chr", "Start", "End", "Count",
+                                      "Avg.Read", "Avg.Meth")) %>%
+    mutate_at(vars(-Chr), as.numeric) %>%
+    replace_na(list(Avg.Read=0, Avg.Meth=0))
+  data.hic <- read.delim("2-hic.bedcov", header=F,
+                         col.names=c("Chr", "Start", "End", "Count",
+                                     "bases", "Length", "Coverage")) %>%
+    mutate_at(vars(-Chr), as.numeric) 
+  data.repeats <- read.table("3-trf.dat", header=F, fill=T) %>%
+    select(Chr=V1, Start=V2, End=V3, Size=V4, Count=V5, Score=V9) %>%
+    mutate_at(vars(-Chr), as.numeric) %>% 
+    na.omit
+
+  label_chrs <- function(x){
+    scales::label_number_si(accuracy=1)(abs(x))
+  }
+
+  plots <- lapply(unique(chr.sizes$Chr), function(chr) {
+    data.fltr <- list(siz=chr.sizes, met=data.meth, hic=data.hic,
+                      rep=data.repeats) %>%
+      lapply(filter, Chr==chr)
+    data.fltr[['met']] <- mutate(data.fltr[['met']],
+                                 Start = -1 * Start,
+                                 Meth = Avg.Meth-0.5)
+    data.fltr[['hic']] <- mutate(data.fltr[['hic']],
+                                 Start = -1 * Start,
+                                 Count = if_else(quantile(Count, 0.99) < Count,
+                                                 NA, Count))
+    data.fltr[['rep']] <- mutate(data.fltr[['rep']],
+                                 Start = -1 * Start,
+                                 End   = -1 * End)
+    plots <- list("met" = ggplot() +
+                   geom_point(aes(Meth, Start, color=Meth, alpha=Count),
+                              data.fltr[['met']], size=0.5) +
+                   scale_color_distiller(type='div', palette='RdYlBu',
+                                         direction=1) +
+                   xlab("Methylation Density"),
+                 "hic" = ggplot() +
+                   geom_tile(aes(1, Start, color=Count),
+                             data.fltr[['hic']]) +
+                   scale_color_distiller(type='seq', palette='Blues',
+                                         direction=1) +
+                   xlab("Hi-C Interactions"),
+                 "rep" = ggplot() +
+                   geom_rect(aes(xmax=Inf, xmin=-Inf, ymax=1, ymin=-Size),
+                             data.fltr[['siz']]) +
+                   geom_errorbar(aes(x=1, ymin=Start, ymax=End), data.fltr[['rep']],
+                                 position=position_dodge2()) +
+                   xlab("Tandem Repeats"))  %>%
+      lapply(function(p) p +       
+                         scale_x_discrete(position='top',
+                                          expand=c(0,0)) +                 
+                         scale_y_continuous(labels=label_chrs,
+                                            limits=c(-1*max(chr.sizes$Size), -1)) +
+                         theme_minimal() +
+                         theme(legend.position='none',
+                               axis.title.y=element_blank(),
+                               axis.title.x=element_text(angle=90, hjust=0, vjust=0),
+                               axis.text.y=element_blank())
+             )
+  plot_grid(plotlist=plots, nrow=1, align='h')})
+  plot_grid(plotlist=plots, nrow=1)
+#+end_src

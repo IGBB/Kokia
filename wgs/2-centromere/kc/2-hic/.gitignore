@@ -1,0 +1,9 @@
+0-db.sh
+1-bwa.sh
+2-offtarget.sh
+Kc.db.amb
+Kc.db.ann
+Kc.db.bwt
+Kc.db.pac
+Kc.db.sa
+Kc-interchr.bam.bai
