@@ -1,0 +1,59 @@
+#+TITLE: Annotation
+#+PROPERTY:  header-args :var DIR=(my/dir)
+
+#+name:genomes
+| Name | Fasta                                                            |
+|------+------------------------------------------------------------------|
+| Kc   | 1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz                |
+| Kd   | 1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz |
+| Kk   | 1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz         |
+
+* Repeats
+
+- Run RepeatModeler
+   #+header: :var genomes=genomes
+  #+begin_src sh :tangle 1-repeats/1-modeler.sh
+      ROOT=$(git rev-parse --show-toplevel)
+      ml singularity
+
+      line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+      read name fasta <<<"$line"
+
+      export BLAST_USAGE_REPORT=false
+
+      SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+      cd $SCRATCH
+
+      singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+                  BuildDatabase -name $SCRATCH/$name.db $ROOT/wgs/$fasta
+      singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+                  RepeatModeler -database $SCRATCH/$name.db \
+                  -threads 48 -LTRStruct
+      cp -r $SCRATCH $DIR/1-repeats/$name.v1.87
+  #+end_src
+
+  #+RESULTS:
+
+- Run RepeatMasker
+  #+begin_src sh :tangle 1-repeats/2-masker.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+read name fasta <<<"$line"
+
+export BLAST_USAGE_REPORT=false
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+cd $SCRATCH
+
+zcat $ROOT/wgs/$fasta > $SCRATCH/$name.fa
+
+singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+            RepeatMasker -pa 48 \
+                          -lib $DIR/1-repeats/$name.v1.87/$name.db-families.fa \
+                           $SCRATCH/$name.fa
+
+cp -r $SCRATCH $DIR/1-repeats/$name.masked
+
+  #+end_src

@@ -1,0 +1,59 @@
+==================================================
+file name: Kc.fa                    
+sequences:            12
+total length:  524969409 bp  (523225012 bp excl N/X-runs)
+GC level:         33.09 %
+bases masked:  329935618 bp ( 62.85 %)
+==================================================
+               number of      length   percentage
+               elements*    occupied  of sequence
+--------------------------------------------------
+Retroelements       178242    165527192 bp   31.53 %
+   SINEs:              579       101911 bp    0.02 %
+   Penelope:             0            0 bp    0.00 %
+   LINEs:            19316     11891578 bp    2.27 %
+    CRE/SLACS            0            0 bp    0.00 %
+     L2/CR1/Rex          0            0 bp    0.00 %
+     R1/LOA/Jockey       0            0 bp    0.00 %
+     R2/R4/NeSL          0            0 bp    0.00 %
+     RTE/Bov-B          42        12622 bp    0.00 %
+     L1/CIN4         19266     11878536 bp    2.26 %
+   LTR elements:    158347    153533703 bp   29.25 %
+     BEL/Pao             0            0 bp    0.00 %
+     Ty1/Copia       37105     28212899 bp    5.37 %
+     Gypsy/DIRS1     76659    108136977 bp   20.60 %
+       Retroviral        0            0 bp    0.00 %
+
+DNA transposons      23525     11750301 bp    2.24 %
+   hobo-Activator     3354      1001317 bp    0.19 %
+   Tc1-IS630-Pogo        0            0 bp    0.00 %
+   En-Spm                0            0 bp    0.00 %
+   MULE-MuDR          9816      7304453 bp    1.39 %
+   PiggyBac              0            0 bp    0.00 %
+   Tourist/Harbinger  1860       904286 bp    0.17 %
+   Other (Mirage,        0            0 bp    0.00 %
+    P-element, Transib)
+
+Rolling-circles       1347       545570 bp    0.10 %
+
+Unclassified:       536581    145555600 bp   27.73 %
+
+Total interspersed repeats:   322833093 bp   61.50 %
+
+
+Small RNA:            2017      1087157 bp    0.21 %
+
+Satellites:             62        27753 bp    0.01 %
+Simple repeats:     102797      4172270 bp    0.79 %
+Low complexity:      25574      1326927 bp    0.25 %
+==================================================
+
+* most repeats fragmented by insertions or deletions
+  have been counted as one element
+                                                      
+
+RepeatMasker version 4.1.5 , default mode
+                                        
+run with rmblastn version 2.14.1+
+The query was compared to classified sequences in ".../Kc.db-families.fa"
+FamDB: 
