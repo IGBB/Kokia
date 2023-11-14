@@ -1,5 +1,5 @@
 #+TITLE: Annotation
-#+PROPERTY:  header-args :var DIR=(my/dir)
+#+PROPERTY:  header-args
 
 #+name:genomes
 | Name | Fasta                                                            |
@@ -35,6 +35,7 @@
   #+RESULTS:
 
 - Run RepeatMasker
+   #+header: :var genomes=genomes
   #+begin_src sh :tangle 1-repeats/2-masker.sh
 ROOT=$(git rev-parse --show-toplevel)
 ml singularity
@@ -57,3 +58,34 @@ singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
 cp -r $SCRATCH $DIR/1-repeats/$name.masked
 
   #+end_src
+
+* Braker3
+#+header: :var genomes=genomes[,0]
+#+begin_src sh :tangle 2-braker3/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation/
+
+name=${genomes[$SLURM_ARRAY_TASK_ID]}
+
+ml singularity
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+mkdir $DIR/2-braker3/$name
+cd $DIR/2-braker3/$name
+
+mkdir $DIR/2-braker3/$name/home
+cp $HOME/.gm_key $DIR/2-braker3/$name/home
+
+singularity exec --cleanenv -H $DIR/2-braker3/$name/home \
+                 -B $ROOT -B $SCRATCH \
+            $DIR/apps/braker3_v.1.0.4.1.sif braker.pl \
+                --species=$name \
+                --genome=$DIR/1-repeats/$name/masker/$name.fa.masked \
+                --prot_seq=$DIR/2-braker3/Viridiplantae.fa \
+                --threads=48 \
+                --workingdir=$SCRATCH
+cp -r $SCRATCH $DIR/2-braker3/$name/output
+
+#+end_src
+
+#+RESULTS:
