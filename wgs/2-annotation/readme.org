@@ -154,4 +154,4 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
 
     ggsave('gene-counts.png', width=12, height=4, bg='white')
   #+end_src
-[[./gene-count.png]]
+[[./gene-counts.png]]
