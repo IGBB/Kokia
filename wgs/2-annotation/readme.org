@@ -90,3 +90,68 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
 #+end_src
 
 #+RESULTS:
+
+* Rename
+:PROPERTIES:
+:ORDERED:  t
+:END:
+#+header: :var genomes=genomes
+  #+begin_src sh :tangle 3-rename.sh
+  ROOT=$(git rev-parse --show-toplevel)
+
+  declare -A names 
+  names["Kc"]="Kocoo"
+  names["Kk"]="Kokau"
+  names["Kd"]="Kodry"
+  names["Gk"]="Gokir"
+
+  cat <<<"$genomes" |
+      while read i fasta; do
+          cp $ROOT/wgs/$fasta $DIR/${names[$i]}.fa.gz
+          
+          tar -O -xf 2-braker3/$i.tar braker.gtf |
+              awk '$1 != chr { chr=$1; c=1;
+                               num=$1; sub(".._", "0", num);
+                               num=substr(num, length(num)-2, 3)
+                   }
+                   $3 == "gene" {
+                       name = $9;
+                       rep=sprintf("%s.%03sG%04d00", spec, num, c++)
+                   }
+                   1 { gsub(name, rep, $9);
+                       sub("\\.t", ".", $9);
+                       print }' \
+                  FS="\t" OFS="\t" spec=${names[$i]} |
+                  gzip > $DIR/${names[$i]}.gtf.gz
+      done
+  #+end_src
+
+
+- Graph
+
+  #+begin_src R 
+    library(tidyverse)
+
+    data <- list.files(pattern=".gtf.gz") %>%
+      setNames(substring(., 0,5)) %>%
+      lapply(data.table::fread) %>%
+      bind_rows(.id='Species') %>%
+      filter(V3 == "gene") %>%
+      mutate(chr = substring(V1, 4)) %>%
+      group_by(Species, chr) %>%
+      count()
+
+    data %>%
+      mutate(chr = factor(chr, c('01', '2_4', '03',
+                                 sprintf('%02d', 5:13)))) %>%
+    ggplot(aes(chr, n, shape=Species, color=Species)) +
+      geom_point(position=position_dodge(width=0.5)) +
+      scale_y_continuous(limits=c(0,4600), expand=c(0,0),
+                         name="Number of Genes") +
+      scale_x_discrete(expand=c(0,0), name="Chromosome") +
+      theme_minimal() +
+      theme(panel.grid.major.x=element_blank())
+
+    ggsave('gene-counts.png', width=12, height=4, bg='white')
+  #+end_src
+[[./gene-count.png]]
