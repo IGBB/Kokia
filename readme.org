@@ -6,7 +6,7 @@ drynarioides/, /Kokia kauaiensis/.
 * Genome Sequence
 - [[./wgs/0-raw/readme.org][Samples]] :: Information about samples and sequencing data
 - [[./wgs/1-assembly/readme.org][Assembly]] :: Assembly methods
-- [[./wgs/2-annotiation/readme.org][Annotation]] :: Annotation methods
+- [[./wgs/2-annotation/readme.org][Annotation]] :: Annotation methods
 
 * GBS
 - [[./gbs/readme.org][Samples]] :: Info for samples used in gbs analysis

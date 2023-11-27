@@ -1,5 +1,5 @@
 #+TITLE: Annotation
-#+PROPERTY:  header-args
+#+PROPERTY:  header-args :var DIR=(my/dir)
 
 #+name:genomes
 | Name | Fasta                                                            |
@@ -7,29 +7,32 @@
 | Kc   | 1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz                |
 | Kd   | 1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz |
 | Kk   | 1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz         |
+| Gk   | 1-assembly/0-ref/kirkii.fa.gz                                    |
 
 * Repeats
 
 - Run RepeatModeler
    #+header: :var genomes=genomes
   #+begin_src sh :tangle 1-repeats/1-modeler.sh
-      ROOT=$(git rev-parse --show-toplevel)
-      ml singularity
+     ROOT=$(git rev-parse --show-toplevel)
+     ml singularity
 
-      line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
-      read name fasta <<<"$line"
+     line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+     read name fasta <<<"$line"
 
-      export BLAST_USAGE_REPORT=false
+     export BLAST_USAGE_REPORT=false
 
-      SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
-      cd $SCRATCH
+     SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+     cd $SCRATCH
 
-      singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
-                  BuildDatabase -name $SCRATCH/$name.db $ROOT/wgs/$fasta
-      singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
-                  RepeatModeler -database $SCRATCH/$name.db \
-                  -threads 48 -LTRStruct
-      cp -r $SCRATCH $DIR/1-repeats/$name.v1.87
+     singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+                 BuildDatabase -name $SCRATCH/$name.db $ROOT/wgs/$fasta
+     singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+                 RepeatModeler -database $SCRATCH/$name.db \
+                 -threads 48 -LTRStruct
+
+     mkdir $DIR/1-repeats/$name/
+     cp -r $SCRATCH $DIR/1-repeats/$name/modeler
   #+end_src
 
   #+RESULTS:
@@ -52,39 +55,37 @@ zcat $ROOT/wgs/$fasta > $SCRATCH/$name.fa
 
 singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
             RepeatMasker -pa 48 \
-                          -lib $DIR/1-repeats/$name.v1.87/$name.db-families.fa \
+                          -lib $DIR/1-repeats/$name/modeler/$name.db-families.fa \
                            $SCRATCH/$name.fa
 
-cp -r $SCRATCH $DIR/1-repeats/$name.masked
+cp -r $SCRATCH $DIR/1-repeats/$name/masker
 
   #+end_src
 
 * Braker3
 #+header: :var genomes=genomes[,0]
 #+begin_src sh :tangle 2-braker3/run.sh
-ROOT=$(git rev-parse --show-toplevel)
-DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation/
+  ROOT=$(git rev-parse --show-toplevel)
+  name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
 
-name=${genomes[$SLURM_ARRAY_TASK_ID]}
+  ml singularity
 
-ml singularity
+  SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+  mkdir $DIR/2-braker3/$name
+  cd $DIR/2-braker3/$name
 
-SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
-mkdir $DIR/2-braker3/$name
-cd $DIR/2-braker3/$name
+  mkdir $DIR/2-braker3/$name/home
+  cp $HOME/.gm_key $DIR/2-braker3/$name/home
 
-mkdir $DIR/2-braker3/$name/home
-cp $HOME/.gm_key $DIR/2-braker3/$name/home
-
-singularity exec --cleanenv -H $DIR/2-braker3/$name/home \
-                 -B $ROOT -B $SCRATCH \
-            $DIR/apps/braker3_v.1.0.4.1.sif braker.pl \
-                --species=$name \
-                --genome=$DIR/1-repeats/$name/masker/$name.fa.masked \
-                --prot_seq=$DIR/2-braker3/Viridiplantae.fa \
-                --threads=48 \
-                --workingdir=$SCRATCH
-cp -r $SCRATCH $DIR/2-braker3/$name/output
+  singularity exec --cleanenv -H $DIR/2-braker3/$name/home \
+                   -B $ROOT -B $SCRATCH \
+              $DIR/apps/braker3_v.1.0.4.1.sif braker.pl \
+                  --species=$name \
+                  --genome=$DIR/1-repeats/$name/masker/$name.fa.masked \
+                  --prot_seq=$DIR/2-braker3/Viridiplantae.fa \
+                  --threads=48 \
+                  --workingdir=$SCRATCH
+  cp -r $SCRATCH $DIR/2-braker3/$name/output
 
 #+end_src
 
