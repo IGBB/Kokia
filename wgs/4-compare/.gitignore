@@ -1,0 +1,7 @@
+apps/
+slurm-*.out
+3-busco/1-genome/run.sh
+3-busco/2-transcriptome/run.sh
+3-busco/3-protein/run.sh
+3-busco/download-lineage.sh
+3-busco/eudicots_odb10/

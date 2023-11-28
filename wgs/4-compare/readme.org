@@ -1,0 +1,166 @@
+#+title: Compare Genomes
+#+PROPERTY:  header-args :var DIR=(my/dir)
+
+#+name:genomes
+| Name | Fasta                                                            |
+|------+------------------------------------------------------------------|
+| Kc   | 1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz                |
+| Kd   | 1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz |
+| Kk   | 1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz         |
+| Gk   | 1-assembly/0-ref/kirkii.fa.gz                                    |
+
+#+name:anno
+| Name | braker tar                    |
+|------+-------------------------------|
+| Kc   | 2-annotation/2-braker3/Kc.tar |
+| Kd   | 2-annotation/2-braker3/Kd.tar |
+| Kk   | 2-annotation/2-braker3/Kk.tar |
+| Gk   | 2-annotation/2-braker3/Gk.tar |
+
+* Genespace
+
+* Hi-C
+
+Mapping the hi-c libraries of the three kokia samples to the four
+genomes to validate SV found in genespace.
+
+#+name: hic
+| Name | Forward                                              | Reverse                                              |
+|------+------------------------------------------------------+------------------------------------------------------|
+| Kc   | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_1.fq.gz | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_2.fq.gz |
+| Kd   | kd/hi-c/kokia_S3HiC_R1.fastq.gz                      | kd/hi-c/kokia_S3HiC_R2.fastq.gz                      |
+| Kk   | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_1.fq.gz | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_2.fq.gz |
+
+- Create bwa database for assembly
+  #+header: :var genomes=genomes
+  #+begin_src sh :tangle 2-hic/0-db/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    read name fasta <<<"$line"
+
+    bwa index -a bwtsw -p $DIR/2-hic/0-db/$name $ROOT/wgs/$fasta
+  #+end_src
+- Align Hi-C data to assembly
+  #+header: :var data=hic
+  #+begin_src sh :tangle 2-hic/1-bwa/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    RAW=$(realpath $ROOT/wgs/0-raw/)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$data")
+    read name fwd rev <<<"$line"
+
+    bwa mem -5SP -t 48 $DIR/2-hic/0-db/$DB $RAW/$fwd $RAW/$rev |
+        samblaster |
+        samtools view -bS -F 2316 |
+        samtools sort -m 60G -o $DIR/2-hic/1-bwa/$DB-$name.bam
+  #+end_src
+
+
+- Graph
+  #+begin_src sh :tangle 2-hic/2-viz/run.sh
+    PATH=$DIR/apps/hic-viz:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+
+    for name in {Gk,Kc,Kd,Kk}-{Kc,Kd,Kk}; do
+        bam=$DIR/2-hic/1-bwa/$name.bam
+        hic-viz $bam > $DIR/2-hic/2-viz/$name.png
+        #samtools view -H $bam CREATE INDV CHR PNGs
+    done
+  #+end_src
+
+* BUSCO
+
+- Get eudicot lineage
+  #+begin_src sh :tangle 3-busco/download-lineage.sh
+  wget -O- --no-check \
+       https://busco-data.ezlab.org/v5/data/lineages/eudicots_odb10.2020-09-10.tar.gz |
+      tar -xz -C $DIR/3-busco
+#+end_src
+- Genome
+  #+header: :var genomes=genomes
+  #+begin_src sh :tangle 3-busco/1-genome/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    ml singularity
+
+    busco () { singularity exec -B $DIR $DIR/apps/busco-v5.5.0_cv1 busco "$@" ; }
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    read name fasta <<<"$line"
+
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+    zcat $ROOT/wgs/$fasta > $SCRATCH/$name.fa
+
+    cd $SCRATCH
+    busco -i $SCRATCH/$name.fa \
+          -l $DIR/3-busco/eudicots_odb10 \
+          -m genome  \
+          -o $name \
+          -c 48
+
+    tar -C $SCRATCH/$name -cf $DIR/3-busco/1-genome/$name.tar \
+        short_summary.specific.eudicots_odb10.$name.txt \
+        short_summary.specific.eudicots_odb10.$name.json \
+        logs \
+        run_eudicots_odb10
+  #+end_src
+
+- Transcriptome
+  #+header: :var anno=anno
+  #+begin_src sh :tangle 3-busco/2-transcriptome/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    ml singularity
+
+    busco () { singularity exec -B $DIR $DIR/apps/busco-v5.5.0_cv1 busco "$@" ; }
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$anno")
+    read name tar <<<"$line"
+
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+    tar -O -xf $ROOT/wgs/$tar braker.codingseq > $SCRATCH/$name.cds.fa
+
+    cd $SCRATCH
+    busco -i $SCRATCH/$name.cds.fa \
+          -l $DIR/3-busco/eudicots_odb10 \
+          -m transcriptome  \
+          -o $name \
+          -c 48
+
+    tar -C $SCRATCH/$name -cf $DIR/3-busco/2-transcriptome/$name.tar \
+        short_summary.specific.eudicots_odb10.$name.txt \
+        short_summary.specific.eudicots_odb10.$name.json \
+        logs \
+        run_eudicots_odb10
+  #+end_src
+- Proteins
+  #+header: :var anno=anno
+  #+begin_src sh :tangle 3-busco/3-protein/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    ml singularity
+
+    busco () { singularity exec -B $DIR $DIR/apps/busco-v5.5.0_cv1 busco "$@" ; }
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$anno")
+    read name tar <<<"$line"
+
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+    tar -O -xf $ROOT/wgs/$tar braker.aa > $SCRATCH/$name.aa.fa
+
+    cd $SCRATCH
+    busco -i $SCRATCH/$name.aa.fa \
+          -l $DIR/3-busco/eudicots_odb10 \
+          -m proteins \
+          -o $name \
+          -c 48
+
+    tar -C $SCRATCH/$name -vcf $DIR/3-busco/3-protein/$name.tar \
+        short_summary.specific.eudicots_odb10.$name.txt \
+        short_summary.specific.eudicots_odb10.$name.json \
+        logs \
+        run_eudicots_odb10
+  #+end_src
