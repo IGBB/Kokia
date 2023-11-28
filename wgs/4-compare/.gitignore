@@ -5,3 +5,15 @@ slurm-*.out
 3-busco/3-protein/run.sh
 3-busco/download-lineage.sh
 3-busco/eudicots_odb10/
+Gk.genome.json
+Gk.protein.json
+Gk.transcriptome.json
+Kc.genome.json
+Kc.protein.json
+Kc.transcriptome.json
+Kd.genome.json
+Kd.protein.json
+Kd.transcriptome.json
+Kk.genome.json
+Kk.protein.json
+Kk.transcriptome.json

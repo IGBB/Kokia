@@ -109,7 +109,6 @@ genomes to validate SV found in genespace.
         logs \
         run_eudicots_odb10
   #+end_src
-
 - Transcriptome
   #+header: :var anno=anno
   #+begin_src sh :tangle 3-busco/2-transcriptome/run.sh
@@ -164,3 +163,73 @@ genomes to validate SV found in genespace.
         logs \
         run_eudicots_odb10
   #+end_src
+- Graph
+  #+begin_src sh  
+    for i in Gk Kk Kc Kd; do
+        tar -O -xf 3-busco/1-genome/$i.tar \
+            short_summary*.json > $i.genome.json;
+        
+        tar -O -xf 3-busco/2-transcriptome/$i.tar \
+            short_summary*.json > $i.transcriptome.json;
+        
+        tar -O -xf 3-busco/3-protein/$i.tar \
+            short_summary*.json > $i.protein.json;
+    done
+  #+end_src
+  #+begin_src R
+    library(tidyverse)
+    library(rjson)
+    library(cowplot)
+
+
+    plots <- lapply(c("Genome", "Transcriptome", "Protein"),
+                    function(mode){
+
+                      data <- paste(c("Gk", "Kc", "Kd", "Kk"),
+                                    tolower(mode), "json", sep=".") %>%
+                        setNames(sub(".json", "", .)) %>%
+                        lapply(function (file) fromJSON(file=file)$results) %>%
+                        lapply(as.data.frame) %>%
+                        bind_rows(.id="Species.type") %>%
+                        separate(Species.type, into=c("Species", "Mode")) %>%
+                        select(Species, label=one_line_summary,
+                               Single.copy, Multi.copy, Fragmented, Missing) %>%
+                        mutate(Species = factor(Species, c("Gk", "Kc", "Kd", "Kk"),
+                                                c("Gossypioides kirkii",
+                                                  "Kokia cookei",
+                                                  "Kokia drynarioides",
+                                                  "Kokia kauaiensis"))) %>%
+                        gather(-Species, -label, key="key", value="value")
+
+                      labels <- select(data, Species, label)
+
+                      ggplot(data) +
+                        geom_col(aes(value, Species, fill=key)) +
+                        geom_text(aes(0, Species, label=label), labels, hjust=-0.01) +
+                        scale_fill_manual(values = c('#33a02c','#b2df8a',
+                                                     '#fdbf6f', '#fb9a99'),
+                                          name = element_blank(),
+                                          breaks = c("Single.copy",
+                                                     "Multi.copy",
+                                                     "Missing",
+                                                     "Fragmented"),
+                                          labels = c("Single Copy",
+                                                     "Duplicated",
+                                                     "Missing",
+                                                     "Fragmented")) +
+                        scale_x_continuous(expand=c(0,0)) +
+                        ggtitle(mode) +
+                        theme_minimal() +
+                        theme(axis.title = element_blank(),
+                              axis.text.x = element_blank(),
+                              legend.position="none",
+                              axis.text.y = element_text(face="italic"))
+                    })
+
+    plots[[4]] = get_legend(plots[[1]] + theme(legend.position="bottom"))
+
+    plot_grid(plotlist = plots, rel_heights=c(1,1,1,0.3), ncol=1)
+
+    ggsave("busco.all.png", width=10, height=5, bg="white")
+  #+end_src
+  [[./busco.all.png]]
