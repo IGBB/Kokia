@@ -1,13 +1,13 @@
 #+TITLE: Assembly of Three Kokia Genomes
-#+property: header-args            :var DIR=(file-name-directory (file-local-name buffer-file-name)) :exports none :eval never-export
-#+property: header-args:sh         :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
-#+property: header-args:shell      :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
-#+property: header-args:bash       :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
-#+property: header-args:python     :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
-#+property: header-args:R          :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
-#+property: header-args:lua        :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
-#+property: header-args:lst        :tangle (tangle-path)
-#+property: header-args:emacs-lisp :results silent
+# #+property: header-args            :var DIR=(file-name-directory (file-local-name buffer-file-name)) :exports none :eval never-export
+# #+property: header-args:sh         :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
+# #+property: header-args:shell      :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory)) :prologue (org-sbe tools)
+# #+property: header-args:bash       :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+# #+property: header-args:python     :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+# #+property: header-args:R          :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+# #+property: header-args:lua        :tangle (tangle-path) :var WORKING=(file-local-name (get-working-directory))
+# #+property: header-args:lst        :tangle (tangle-path)
+# #+property: header-args:emacs-lisp :results silent
 
 #+name: local-functions
 #+begin_src emacs-lisp
@@ -3149,19 +3149,14 @@ scaffold_43:1-3289000
 
 **** Kc_03
 
-#+name: Kc_03.curated
+#+name: Kc_03.original
 #+begin_src lst
-scaffold_1:33025001-33350000
-scaffold_1:26500001-28426000
--scaffold_1:20950001-26500000
-scaffold_86:26001-1753867
 scaffold_122:1-983638
--scaffold_113:1-1154174
-scaffold_1:1-2000000
-scaffold_265:1-62435
-scaffold_1:2000001-14620000
-scaffold_2:16625001-17000000
-scaffold_1:14787001-15787000
+-scaffold_86:26001-1753867
+scaffold_1:20950001-28426000
+scaffold_113:1-1154174
+-scaffold_265:1-62435
+scaffold_1:1-15787000
 scaffold_1:16528001-20950000
 -scaffold_13:1148001-7566056
 -scaffold_62:514001-2572272
@@ -3170,24 +3165,21 @@ scaffold_140:1-677533
 #+end_src
 
 #+name: Kc_03.curated
-#+begin_src lst
+#+begin_src lst :tangle Kokia_cookei_C69/6-curate/assembly_curated/Kc_03.regions
+-scaffold_1:20950001-28426000
 scaffold_113:1-1154174
--scaffold_265:1-62435
-scaffold_1:26500001-28426000
--scaffold_86:26001-1753867
-scaffold_1:33025001-33350000
-scaffold_1:20950001-26500000
+scaffold_86:26001-1753867
 -scaffold_122:1-983638
-scaffold_1:1-2000000
-scaffold_2:16625001-17000000
-scaffold_1:2000001-14620000
-scaffold_1:14787001-15787000
+
+-scaffold_265:1-62435
+scaffold_1:1-15787000
 scaffold_1:16528001-20950000
 -scaffold_13:1148001-7566056
 -scaffold_62:514001-2572272
 -scaffold_62:1-514000
 scaffold_140:1-677533
 #+end_src
+
 
 **** Kc_05
 
@@ -3221,58 +3213,106 @@ scaffold_88:1-1716024
 
 **** Kc_06
 
-#+name: Kc_06.curated
+#+name: Kc_06.original
 #+begin_src lst
-scaffold_1:30600000-30880000
--scaffold_4:1-1902000
-scaffold_54:1-2797020
--scaffold_126:1-844186
-scaffold_46:2389001-3246299
--scaffold_118:42001-1060247
+scaffold_20:2860001-3848000
+scaffold_20:3848001-6340061
+scaffold_16:2664001-3348000
+scaffold_16:6353001-6947706
+scaffold_183:1001-183000
+scaffold_78:1-1966265
+-scaffold_9:1351001-2451000
+scaffold_90:913001-1690000
+-scaffold_30:1-4497056
+-scaffold_282:2001-54852
+scaffold_118:42001-1060247
+-scaffold_46:2389001-3246299
 -scaffold_118:1-42000
-scaffold_282:2001-54852
-scaffold_30:1-4497056
--scaffold_90:913001-1690000
-scaffold_9:1351001-2451000
--scaffold_78:1-1966265
--scaffold_183:1001-183000
--scaffold_16:6353001-6947706
--scaffold_5:1600001-1950000
--scaffold_16:2664001-3348000
--scaffold_20:3848001-6340061
--scaffold_20:2860001-3848000
+scaffold_126:1-844186
+-scaffold_54:1-2797020
+scaffold_4:1-1902000
 scaffold_230:2001-90367
--scaffold_20:1-960000
--scaffold_46:1094501-2389000
--scaffold_46:1-1094500
--scaffold_152:1-558117
--scaffold_93:1-1649224
--scaffold_11:3850000-4200001
--scaffold_12:2155442-2905441
--scaffold_35:3907001-4167091
-scaffold_60:1-2589450
-scaffold_27:1-1247000
-scaffold_55:1-2793890
-scaffold_271:1-57957
-scaffold_70:1-2339735
-scaffold_169:1-208000
--scaffold_128:1-823178
-scaffold_160:1-475450
-scaffold_16:1-2664000
--scaffold_16:3549001-5679000
+scaffold_16:3549001-5679000
+-scaffold_16:1-2664000
+-scaffold_160:1-475450
+scaffold_128:1-823178
+-scaffold_169:1-208000
+-scaffold_70:1-2339735
+-scaffold_271:1-57957
+-scaffold_55:1-2793890
+-scaffold_27:1-1247000
+-scaffold_60:1-2589450
+scaffold_35:3907001-4167091
+scaffold_93:1-1649224
+scaffold_152:1-558117
+scaffold_46:1-2389000
+scaffold_20:1-960000
+scaffold_153:1-552159
+scaffold_67:1-2470057
 scaffold_89:1549001-1712813
 -scaffold_102:1-1377347
-scaffold_67:1-2470057
 -scaffold_154:59001-536543
 -scaffold_365:1-34519
 -scaffold_154:7001-59000
 scaffold_94:1-1637721
-scaffold_39:3578001-4034198
--scaffold_153:1-552159
 -scaffold_181:1001-324024
 scaffold_34:1-4177888
 -scaffold_81:1-1903455
-scaffold_89:774501-1549000
+scaffold_39:3578001-4034198
+#+end_src
+
+
+#+name: Kc_06.curated
+#+begin_src lst :tangle Kokia_cookei_C69/6-curate/assembly_curated/Kc_06.regions
+scaffold_81:1-1903455
+-scaffold_34:1-4177888
+
+-scaffold_154:59001-536543
+-scaffold_365:1-34519
+-scaffold_154:7001-59000
+scaffold_94:1-1637721
+-scaffold_181:1001-324024
+scaffold_39:3578001-4034198
+
+scaffold_153:1-552159
+scaffold_67:1-2470057
+scaffold_89:1549001-1712813
+-scaffold_102:1-1377347
+
+scaffold_230:2001-90367
+scaffold_16:3549001-5679000
+scaffold_16:1-2664000
+-scaffold_160:1-475450
+scaffold_128:1-823178
+-scaffold_169:1-208000
+-scaffold_70:1-2339735
+-scaffold_271:1-57957
+-scaffold_55:1-2793890
+-scaffold_27:1-1247000
+-scaffold_60:1-2589450
+scaffold_35:3907001-4167091
+scaffold_93:1-1649224
+scaffold_152:1-558117
+scaffold_46:1-2389000
+scaffold_20:1-960000
+scaffold_20:2860001-3848000
+scaffold_20:3848001-6340061
+scaffold_16:2664001-3348000
+scaffold_16:6353001-6947706
+scaffold_183:1001-183000
+scaffold_78:1-1966265
+-scaffold_9:1351001-2451000
+scaffold_90:913001-1690000
+-scaffold_30:1-4497056
+-scaffold_282:2001-54852
+
+scaffold_46:2389001-3246299
+-scaffold_118:42001-1060247
+
+-scaffold_118:1-42000
+scaffold_126:1-844186
+-scaffold_54:1-2797020
+-scaffold_4:1-1902000
 #+end_src
 
 **** Kc_07
