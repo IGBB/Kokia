@@ -95,35 +95,36 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
 :PROPERTIES:
 :ORDERED:  t
 :END:
-#+header: :var genomes=genomes
+#+header: :var genomes=genomes[,]
   #+begin_src sh :tangle 3-rename.sh
   ROOT=$(git rev-parse --show-toplevel)
 
-  declare -A names 
-  names["Kc"]="Kocoo"
-  names["Kk"]="Kokau"
-  names["Kd"]="Kodry"
-  names["Gk"]="Gokir"
+    declare -A names 
+    names["Kc"]="Kocoo"
+    names["Kk"]="Kokau"
+    names["Kd"]="Kodry"
+    names["Gk"]="Gokir"
 
-  cat <<<"$genomes" |
-      while read i fasta; do
-          cp $ROOT/wgs/$fasta $DIR/${names[$i]}.fa.gz
-          
-          tar -O -xf 2-braker3/$i.tar braker.gtf |
-              awk '$1 != chr { chr=$1; c=1;
-                               num=$1; sub(".._", "0", num);
-                               num=substr(num, length(num)-2, 3)
-                   }
-                   $3 == "gene" {
-                       name = $9;
-                       rep=sprintf("%s.%03sG%04d00", spec, num, c++)
-                   }
-                   1 { gsub(name, rep, $9);
-                       sub("\\.t", ".", $9);
-                       print }' \
-                  FS="\t" OFS="\t" spec=${names[$i]} |
-                  gzip > $DIR/${names[$i]}.gtf.gz
-      done
+  #  cat <<<"$genomes" |
+   cat <<<"Kc    1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz" |     
+        while read i fasta; do
+            cp $ROOT/wgs/$fasta $DIR/${names[$i]}.fa.gz
+            
+            tar -O -xf 2-braker3/$i.tar braker.gtf |
+                awk '$1 != chr { chr=$1; c=1;
+                                 num=$1; sub(".._", "0", num);
+                                 num=substr(num, length(num)-2, 3)
+                     }
+                     $3 == "gene" {
+                         name = $9;
+                         rep=sprintf("%s.%03sG%04d00", spec, num, c++)
+                     }
+                     1 { gsub(name, rep, $9);
+                         sub("\\.t", ".", $9);
+                         print }' \
+                    FS="\t" OFS="\t" spec=${names[$i]} |
+                    gzip > $DIR/${names[$i]}.gtf.gz
+        done
   #+end_src
 
 
