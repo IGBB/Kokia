@@ -1,5 +1,5 @@
 #+TITLE: Assembly
-#+PROPERTY:  header-args :var DIR=(file-name-directory (file-local-name buffer-file-name))
+#+PROPERTY:  header-args :var DIR=(my/dir)
 
 #+name: transpose
 #+header: table=""
@@ -1473,3 +1473,292 @@ singularity exec -B $DIR \
 
 #+RESULTS:
 
+
+* Scaffolding
+#+name: polished-genomes
+| Name | Polsihed Genomes                             |
+|------+----------------------------------------------|
+| Kc   | Kokia_cookei_C69/2-polish/consensus.fasta    |
+| Kk   | Kokia_kauaiensis_S9/2-polish/consensus.fasta |
+
+#+name: hic
+| Name | Forward                                              | Reverse                                              |
+|------+------------------------------------------------------+------------------------------------------------------|
+| Kc   | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_1.fq.gz | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_2.fq.gz |
+| Kk   | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_1.fq.gz | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_2.fq.gz |
+
+| Kd   | kd/hi-c/kokia_S3HiC_R1.fastq.gz                      | kd/hi-c/kokia_S3HiC_R2.fastq.gz                      |
+
+- Create bwa database for assembly
+  #+header: :var genomes=polished-genomes
+  #+begin_src sh :tangle 3-scaffolding/0-db/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    read name fasta <<<"$line"
+
+    bwa index -a bwtsw -p $DIR/3-scaffolding/0-db/$name $DIR/$fasta
+  #+end_src
+
+- Align Hi-C data to assembly
+  #+header: :var data=hic
+  #+begin_src sh :tangle 3-scaffolding/1-bwa/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    RAW=$(realpath $ROOT/wgs/0-raw/)
+
+    PATH=$DIR/apps/bwa-0.7.17:$PATH
+    PATH=$DIR/apps/samtools-1.17/bin:$PATH
+    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$data")
+    read name fwd rev <<<"$line"
+
+    bwa mem -5SP -t 48 $DIR/3-scaffolding/0-db/$name $RAW/$fwd $RAW/$rev |
+        samblaster |
+        samtools view -bS -F 2316 |
+        samtools sort -m 60G -o $DIR/3-scaffolding/1-bwa/$name.bam
+
+    samtools index $DIR/3-scaffolding/1-bwa/$name.bam
+  #+end_src
+
+- Run yahs
+  #+header: :var genomes=polished-genomes
+  #+begin_src sh :tangle 3-scaffolding/2-yahs/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/yahs/:$PATH
+
+    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    read name fasta <<<"$line"
+
+    yahs $DIR/$fasta $DIR/3-scaffolding/1-bwa/$name.bam \
+         -o $DIR/3-scaffolding/2-yahs/$name
+  #+end_src
+
+** Splitting combined chrs
+Based on the dotplot to kirkii, scaffold_1 for both Kc and Kk and
+scaffold_2 and scaffold_7 in Kc contain multiple chrs. Using hic
+contact map to split those scaffolds.
+
+- Get regions
+  #+begin_src sh :tangle 3-scaffolding/3-split/get-regions.sh
+    for name in Kc Kk; do
+        awk '$1 == "scaffold_1" && $5 == "W" {printf "%s:%d-%d\n", $6, $7, $8}' \
+            3-scaffolding/2-yahs/${name}_scaffolds_final.agp \
+            > 3-scaffolding/3-split/$name.scaff1.regions
+    done
+
+    name=Kc
+    awk '$1 == "scaffold_2" && $5 == "W" {printf "%s:%d-%d\n", $6, $7, $8}' \
+        3-scaffolding/2-yahs/${name}_scaffolds_final.agp \
+        > 3-scaffolding/3-split/$name.scaff2.regions
+
+    name=Kc
+    awk '$1 == "scaffold_7" && $5 == "W" {printf "%s:%d-%d\n", $6, $7, $8}' \
+        3-scaffolding/2-yahs/${name}_scaffolds_final.agp \
+        > 3-scaffolding/3-split/$name.scaff7.regions
+
+  #+end_src
+- Plot
+  #+begin_src tmux :session kokia:atlas
+    ml gd/
+
+#    for scaff in Kk.scaff1 Kc.scaff1 Kc.scaff2 Kc.scaff7; do
+    for scaff in Kc.scaff7; do
+        name=${scaff:0:2}
+        $DIR/apps/hic-viz/hic-viz -m 600 -b 300 -s 5 \
+                                  -r $DIR/3-scaffolding/3-split/$scaff.regions \
+                                  $DIR/3-scaffolding/1-bwa/$name.bam \
+                                  > $DIR/3-scaffolding/3-split/$scaff.png
+
+    done
+  #+end_src
+- split scaffolds
+  #+begin_src tmux :session kokia:atlas
+    ml python
+
+    awk '$1 == "scaffold_1" && $6 == "ptg000024l" && $7==1 ;
+         $1 == "scaffold_1" && $6 == "ptg000120l" && $7==1 ;
+         $1 == "scaffold_1" && $6 == "ptg000004l" && $7==4001 ;
+         $1 == "scaffold_1" && $6 == "ptg000153l" && $7==375001 ;
+         $1 == "scaffold_1" && $6 == "ptg000592l" && $7==8001 ;
+         $1 == "scaffold_2" && $6 == "ptg000137l" && $7==1 ; 
+         $1 == "scaffold_2" && $6 == "ptg000330l" && $7==1
+         $1 == "scaffold_7" && $6 == "ptg000740l" && $7==11001
+         $1 == "scaffold_7" && $6 == "ptg000242l" && $7==1
+         $1 == "scaffold_7" && $6 == "ptg000337l" && $7==3001
+         $1 == "scaffold_7" && $6 == "ptg000285l" && $7==1041001
+         ' \
+             FS="\t" OFS="\t" \
+             $DIR/3-scaffolding/2-yahs/Kc_scaffolds_final.agp |
+        awk '{_[$1] = _[$1] "," ($2-1)}
+             END {for( i in _ ) {
+                     sub("^,", "", _[i]);
+                     print i, _[i]
+                     }}' OFS="\t" |
+        agptools split /dev/stdin \
+                 $DIR/3-scaffolding/2-yahs/Kc_scaffolds_final.agp \
+                 > $DIR/3-scaffolding/Kc.agp
+
+
+    awk '$1 == "scaffold_1" && $6 == "ptg000053l" && $7==1 ;' \
+        $DIR/3-scaffolding/2-yahs/Kk_scaffolds_final.agp |
+        awk '{_[$1] = _[$1] "," ($2-1)}
+             END {for( i in _ ) {
+                     sub("^,", "", _[i]);
+                     print i, _[i]
+                     }}' OFS="\t" |
+        agptools split /dev/stdin \
+                 $DIR/3-scaffolding/2-yahs/Kk_scaffolds_final.agp \
+                 > $DIR/3-scaffolding/Kk.agp
+        
+
+  #+end_src
+- make fasta
+  #+header: :var genomes=polished-genomes
+  #+begin_src sh :tangle 3-scaffolding/4-compile.sh
+    ml python
+
+    cat  <<<"$genomes" |
+        while read name fasta; do
+            agptools assemble $DIR/$fasta \
+                     $DIR/3-scaffolding/$name.agp \
+                     > $DIR/3-scaffolding/$name.fa
+        done
+  #+end_src
+  
+
+* Arrange
+
+- Align to kirkii
+  #+header: :var genomes=polished-genomes[,0]
+  #+begin_src sh :tangle 4-arrange/1-align.sh
+    ml minimap2/2.17
+
+    name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    
+    minimap2 -x asm5 -t 48 \
+        $DIR/0-ref/kirkii.fa \
+        $DIR/3-scaffolding/$name.fa \
+        > $DIR/4-arrange/$name.paf
+         #+end_src
+- Dotplot
+  #+header: :var genomes=polished-genomes[,0]
+  #+begin_src sh :tangle 4-arrange/2-plot.sh
+  name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+  cd $DIR/4-arrange
+  Rscript $DIR/apps/pafCoordsDotPlotly.R \
+       -i $DIR/4-arrange/$name.paf \
+       -o $name \
+       -m 20000 \
+       -p 12 \
+       -x -s -t -l
+  #+end_src
+- Orient and arrange using kirkii
+  #+header: :var genomes=polished-genomes[,0]
+  #+begin_src sh :tangle 4-arrange/3-ragtag/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+    ml singularity
+
+    ragtag () {
+        singularity exec --no-home -B$ROOT \
+                    $DIR/apps/ragtag_2.1.0--pyhb7b1952_0.sif \
+                    ragtag.py "$@"
+        
+    }
+
+    ragtag scaffold -t 48 -q 60 -i 0.75 \
+           -o $DIR/4-arrange/3-ragtag/$name \
+           $DIR/0-ref/kirkii.fa \
+           $DIR/3-scaffolding/$name.fa
+  #+end_src
+
+- Join yahs scaffolds based on ragtag arrangment
+  #+header: :var genomes=polished-genomes[,0]
+    #+begin_src sh :tangle 4-arrange/4-forward.sh
+    ml python
+    name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+
+    awk '$5 == "W" { _[$1] = _[$1] "," $9 $6; }
+             END {for( i in _ ) {
+                     sub("^,", "", _[i]);
+                     print _[i], i;
+                     }}' OFS="\t" \
+                         $DIR/4-arrange/3-ragtag/$name/ragtag.scaffold.agp |
+        sed  -e "s/KI_/${name}_/" -e "s/_RagTag//"|
+        sort -k2,2 |
+        agptools join -n 100 -t scaffold -e align_xgenus \
+                 /dev/stdin $DIR/3-scaffolding/$name.agp \
+                 > $DIR/4-arrange/$name.agp
+          #+end_src
+* Curate
+
+- Separate agp files by scaffold name
+  #+header: :var genomes=polished-genomes[,0]
+    #+begin_src sh :tangle 5-curate/magpie.sh
+    PATH=$DIR/apps/agp-curator:$PATH
+      
+    cat  <<<"$genomes" |
+        while read name; do
+            magpie $DIR/5-curate/$name.magpie \
+                   $DIR/4-arrange/$name.agp \
+                   > $DIR/5-curate/$name.agp
+          done
+  #+end_src
+- Plot
+  #+header: :var genomes=polished-genomes[,0]
+    #+begin_src sh :tangle 5-curate/plot.sh
+    ml gd/
+
+    cat  <<<"$genomes" |
+        while read name; do
+            
+            for i in ${name}_{01,2_4,03} ${name}_{05..13} scaffold; do
+                grep $i $DIR/5-curate/$name.agp | 
+                    awk '$5 == "W" {sub("+", "", $9);
+                                    printf "%s%s:%d-%d\n", $9, $6, $7, $8}' |
+                    $DIR/apps/hic-viz/hic-viz \
+                        -m 600 -b 300 -s 5 \
+                        -r /dev/stdin \
+                        $DIR/3-scaffolding/1-bwa/$name.bam \
+                        > $DIR/5-curate/$name/$i.png 
+            done
+            
+            awk '$5 == "W" {sub("+", "", $9);
+                            printf "%s%s:%d-%d\n", $9, $6, $7, $8}' \
+                $DIR/5-curate/$name.agp |
+                $DIR/apps/hic-viz/hic-viz \
+                    -m 600 -b 1500 -s 2 \
+                    -r /dev/stdin \
+                    $DIR/3-scaffolding/1-bwa/$name.bam \
+                    > $DIR/5-curate/$name/all.png 
+    done
+  #+end_src
+
+KC
+#+begin_src text :tangle 5-curate/Kc.magpie
+  MOVE ptg000270l:1-438782 THRU ptg000197l:1-1000251
+       AFTER ptg000353l:1-504875;
+  REVCOMP ptg000259l:1-2320243 THRU ptg000178l:1-1643459;
+
+
+  MOVE ptg000360l:1-361118 AFTER ptg000303l:1-427341;
+  REVCOMP ptg000146l:1-872000 THRU ptg000057l:1-2486748;
+  REVCOMP ptg000109l:55001-2346385 THRU ptg001177l:1-11902;
+
+  CREATE scaffold_ptg60 FROM ptg000060l:1-1372371;
+
+
+#+end_src
+
+Kk
+#+begin_src text :tangle 5-curate/Kk.magpie
+      
+#+end_src
+
+
+#+begin_src tmux :session kokia:atlas
+  PATH=$DIR/apps/agp-curator:$PATH
+  
+#+end_src
