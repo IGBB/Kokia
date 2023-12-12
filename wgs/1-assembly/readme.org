@@ -1627,7 +1627,6 @@ contact map to split those scaffolds.
         done
   #+end_src
   
-
 * Arrange
 
 - Align to kirkii
@@ -1694,71 +1693,163 @@ contact map to split those scaffolds.
           #+end_src
 * Curate
 
-- Separate agp files by scaffold name
-  #+header: :var genomes=polished-genomes[,0]
-    #+begin_src sh :tangle 5-curate/magpie.sh
-    PATH=$DIR/apps/agp-curator:$PATH
-      
-    cat  <<<"$genomes" |
-        while read name; do
-            magpie $DIR/5-curate/$name.magpie \
-                   $DIR/4-arrange/$name.agp \
-                   > $DIR/5-curate/$name.agp
-          done
-  #+end_src
 - Plot
-  #+header: :var genomes=polished-genomes[,0]
     #+begin_src sh :tangle 5-curate/plot.sh
-    ml gd/
+      PATH=$DIR/apps/hic-viz/:$PATH
+      PATH=$DIR/apps/agp-curator/:$PATH
 
-    cat  <<<"$genomes" |
-        while read name; do
-            
-            for i in ${name}_{01,2_4,03} ${name}_{05..13} scaffold; do
-                grep $i $DIR/5-curate/$name.agp | 
-                    awk '$5 == "W" {sub("+", "", $9);
-                                    printf "%s%s:%d-%d\n", $9, $6, $7, $8}' |
-                    $DIR/apps/hic-viz/hic-viz \
-                        -m 600 -b 300 -s 5 \
-                        -r /dev/stdin \
-                        $DIR/3-scaffolding/1-bwa/$name.bam \
-                        > $DIR/5-curate/$name/$i.png 
-            done
-            
-            awk '$5 == "W" {sub("+", "", $9);
-                            printf "%s%s:%d-%d\n", $9, $6, $7, $8}' \
-                $DIR/5-curate/$name.agp |
-                $DIR/apps/hic-viz/hic-viz \
-                    -m 600 -b 1500 -s 2 \
-                    -r /dev/stdin \
-                    $DIR/3-scaffolding/1-bwa/$name.bam \
-                    > $DIR/5-curate/$name/all.png 
-    done
+      scaff=$1
+      name=${scaff:0:2}
+
+      if [ ! -e $DIR/4-arrange/$name.$scaff.png ]; then
+          awk '$1 == chr && $5 == "W" {
+                  sub("+", "", $9);
+                  printf "%s%s:%d-%d\n", $9, $6, $7, $8
+                          }' chr=$scaff $DIR/4-arrange/$name.agp |
+              hic-viz -m 600 -b 300 -s 8 -r /dev/stdin  \
+                      -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf \
+                      -o $DIR/4-arrange/$name.$scaff.png \
+                      $DIR/3-scaffolding/1-bwa/$name.bam
+      fi
+
+      magpie $DIR/5-curate/$name.magpie \
+             $DIR/4-arrange/$name.agp \
+             > $DIR/5-curate/$name.agp
+      awk '$1 == chr && $5 == "W" {
+              sub("+", "", $9);
+              printf "%s%s:%d-%d\n", $9, $6, $7, $8
+              }' chr=$scaff $DIR/5-curate/$name.agp |
+          hic-viz -m 600 -b 300 -s 8 -r /dev/stdin  \
+                  -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf \
+                  -o $DIR/5-curate/$name.$scaff.png \
+                  $DIR/3-scaffolding/1-bwa/$name.bam
+
   #+end_src
+- Assemble and align curated genomes to kirkii
+  #+header: :var genomes=polished-genomes[,0]
+    #+begin_src sh :tangle 5-curate/dotplot.sh
+    ml python  minimap2/2.14
+    DIR=/home/maa146/Projects/Kokia/wgs/1-assembly
 
-KC
-#+begin_src text :tangle 5-curate/Kc.magpie
-  MOVE ptg000270l:1-438782 THRU ptg000197l:1-1000251
-       AFTER ptg000353l:1-504875;
-  REVCOMP ptg000259l:1-2320243 THRU ptg000178l:1-1643459;
+    name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+
+    ~/.local/bin/agptools assemble \
+                          $DIR/2-polish/$name.fa \
+                          $DIR/5-curate/$name.agp \
+                          > $DIR/5-curate/$name.fa
+
+    minimap2 -x asm5 \
+             $DIR/0-ref/kirkii.fa.gz \
+             $DIR/5-curate/$name.fa \
+             > $DIR/5-curate/$name.paf
+
+    cd $DIR/5-curate    
+
+    Rscript $DIR/apps/pafCoordsDotPlotly.R \
+            -i $DIR/5-curate/$name.paf \
+            -o $name \
+            -m 20000 \
+            -p 20 \
+            -x -s -t -l
+  #+end_src
+** Hic
+- Align hic to curated genomes
+  - Create bwa database for assembly
+      #+header: :var genomes=polished-genomes[,0]
+    #+begin_src sh :tangle 5-curate/hic/0-db/run.sh
+         ml python
+         ROOT=$(git rev-parse --show-toplevel)
+         PATH=$DIR/apps/bwa-0.7.17:$PATH
+         PATH=$DIR/apps/agp-curator/:$PATH
+
+         name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+
+         magpie $DIR/5-curate/$name.magpie \
+                $DIR/4-arrange/$name.agp \
+                > $DIR/5-curate/$name.agp
+
+         agptools assemble \
+                  $DIR/2-polish/$name.fa \
+                  $DIR/5-curate/$name.agp \
+                  > $DIR/5-curate/$name.fa
+
+         bwa index -a bwtsw \
+             -p $DIR/5-curate/hic/0-db/$name \
+              $DIR/5-curate/$name.fa
+    #+end_src
+
+  - Align Hi-C data to assembly
+    #+header: :var data=hic
+    #+begin_src sh :tangle 5-curate/hic/1-bwa/run.sh
+      ROOT=$(git rev-parse --show-toplevel)
+      RAW=$(realpath $ROOT/wgs/0-raw/)
+
+      PATH=$DIR/apps/bwa-0.7.17:$PATH
+      PATH=$DIR/apps/samtools-1.17/bin:$PATH
+      PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+
+      line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$data")
+      read name fwd rev <<<"$line"
+
+      bwa mem -5SP -t 48 \
+          $DIR/5-curate/hic/0-db/$name $RAW/$fwd $RAW/$rev |
+          samblaster |
+          samtools view -bS -F 2316 |
+          samtools sort -m 60G \
+                   -o $DIR/5-curate/hic/1-bwa/$name.bam
+
+      samtools index $DIR/5-curate/hic/1-bwa/$name.bam
+    #+end_src
 
 
-  MOVE ptg000360l:1-361118 AFTER ptg000303l:1-427341;
-  REVCOMP ptg000146l:1-872000 THRU ptg000057l:1-2486748;
-  REVCOMP ptg000109l:55001-2346385 THRU ptg001177l:1-11902;
+** Finialize
 
-  CREATE scaffold_ptg60 FROM ptg000060l:1-1372371;
+yahs split some contigs that are now adjacent in the agp file. Finding
+and combining all those to reduce gaps.
 
+#+header: :var genomes=polished-genomes[,0]
+#+begin_src sh :tangle 5-curate/99-final.sh
+  DIR=.
+  ml python
+  PATH=$DIR/apps/agp-curator/:~/.local/bin:$PATH
 
+  cat <<<"$genomes" |
+      while read name; do
+          magpie --simplify \
+                 $DIR/5-curate/$name.magpie \
+                 $DIR/4-arrange/$name.agp \
+                 > $DIR/5-curate/$name.agp
+
+          agptools assemble \
+                   $DIR/2-polish/$name.fa \
+                   $DIR/5-curate/$name.agp |
+              gzip > $DIR/5-curate/$name.fa.gz
+      done
 #+end_src
 
-Kk
-#+begin_src text :tangle 5-curate/Kk.magpie
-      
-#+end_src
+*** Kd
+Kd was curated manually. Only thing needed is to orient chrs based on
+kirkii
+#+begin_src sh  :tangle 5-curate/99-final.kd.sh
+    DIR=.
 
+    PATH=$DIR/apps/samtools-1.17/:$PATH
 
-#+begin_src tmux :session kokia:atlas
-  PATH=$DIR/apps/agp-curator:$PATH
-  
+    Kd=$DIR/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta
+    #  minimap2 -x asm5 $DIR/0-ref/kirkii.fa.gz $Kd |
+    cat $DIR/5-curate/Kd.paf |
+          awk '$11 >= 100000 {
+             i = 1;
+             if($5 == "-") i = -1;
+             _[$1] += i; }
+           END{for(i in _) print i, _[i];}' OFS="\t" |
+          while read chr dir; do
+              flags="--mark-strand no"
+              if [ $dir -lt 0 ]; then
+                  flags="-i $flags"
+              fi
+
+              samtools faidx $flags $Kd $chr
+          done |
+          gzip > $DIR/5-curate/Kd.fa.gz
 #+end_src
