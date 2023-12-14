@@ -1809,7 +1809,6 @@ and combining all those to reduce gaps.
 
 #+header: :var genomes=polished-genomes[,0]
 #+begin_src sh :tangle 5-curate/99-final.sh
-  DIR=.
   ml python
   PATH=$DIR/apps/agp-curator/:~/.local/bin:$PATH
 
