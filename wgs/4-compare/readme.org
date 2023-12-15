@@ -242,12 +242,12 @@ genomes to validate SV found in genespace.
   #+end_src
   [[./busco.all.png]]
 
-    #+begin_src R :session kokia
+    #+begin_src R :session kokiaR
       library(tidyverse)
       library(rjson)
 
 
-      paste(c("Gk", "Kc", "Kd", "Kk"),
+      paste(c("Gokir", "Kocoo", "Kodry", "Kokau"),
                     "genome", "json", sep=".") %>%
         setNames(sub(".json", "", .)) %>%
         lapply(function (file) fromJSON(file=file)$results) %>%
@@ -255,7 +255,7 @@ genomes to validate SV found in genespace.
         bind_rows(.id="Species.type") %>%
         separate(Species.type, into=c("Species", "Mode")) %>%
         select(Species, Number.of.contigs, Total.length, Percent.gaps, Contigs.N50) %>%
-        mutate(Species = factor(Species, c("Gk", "Kc", "Kd", "Kk"),
+        mutate(Species = factor(Species, c("Gokir", "Kocoo", "Kodry", "Kokau"),
                                 c("Gossypioides kirkii",
                                   "Kokia cookei",
                                   "Kokia drynarioides",
@@ -263,10 +263,12 @@ genomes to validate SV found in genespace.
 
   #+end_src
 
-| Species             | Number.of.contigs | Total.length | Percent.gaps | Contigs.N50 |
-|---------------------+-------------------+--------------+--------------+-------------|
-| Gossypioides kirkii |               288 |    538117542 |       0.005% |     8700000 |
-| Kokia cookei        |               745 |    524969409 |       0.332% |     1716024 |
-| Kokia drynarioides  |               780 |    511904237 |       0.015% |     1881333 |
-| Kokia kauaiensis    |               663 |    527234597 |       0.012% |     1538567 |
+#+RESULTS:
+| Species             | Num Contigs | Totla length | Percent Gaps | Contig N50 |
+|-                    |             |              |              |            |
+| Gossypioides kirkii |         288 |    538117542 |       0.005% |    8700000 |
+| Kokia cookei        |        2300 |    563551662 |       0.017% |    1771125 |
+| Kokia drynarioides  |         780 |    511904237 |       0.015% |    1881333 |
+| Kokia kauaiensis    |        2094 |    556827260 |       0.019% |    1469000 |
+
 

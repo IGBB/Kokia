@@ -7,7 +7,9 @@ drynarioides/, /Kokia kauaiensis/.
 - [[./wgs/0-raw/readme.org][Samples]] :: Information about samples and sequencing data
 - [[./wgs/1-assembly/readme.org][Assembly]] :: Assembly methods
 - [[./wgs/2-annotation/readme.org][Annotation]] :: Annotation methods
-
+- [[./wgs/3-centromere/readme.org][Centromere Predictions]] :: prelim centromere prediction (not run on
+  new genomes)
+- [[./wgs/4-compare/readme.org][Compare Genomes]] :: genespace, hic, and busco methods for all genomes
 * GBS
 - [[./gbs/readme.org][Samples]] :: Info for samples used in gbs analysis
 
