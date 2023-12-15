@@ -1,23 +1,72 @@
 #+title: Compare Genomes
 #+PROPERTY:  header-args :var DIR=(my/dir)
 
-#+name:genomes
-| Name | Fasta                                                            |
-|------+------------------------------------------------------------------|
-| Kc   | 1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz                |
-| Kd   | 1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz |
-| Kk   | 1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz         |
-| Gk   | 1-assembly/0-ref/kirkii.fa.gz                                    |
-
 #+name:anno
-| Name | braker tar                    |
-|------+-------------------------------|
-| Kc   | 2-annotation/2-braker3/Kc.tar |
-| Kd   | 2-annotation/2-braker3/Kd.tar |
-| Kk   | 2-annotation/2-braker3/Kk.tar |
-| Gk   | 2-annotation/2-braker3/Gk.tar |
+| Name  | braker gtf                | Fasta                         |
+|-------+---------------------------+-------------------------------|
+| Kocoo | 2-annotation/Kocoo.gtf.gz | 1-assembly/5-curate/Kc.fa.gz  |
+| Kodry | 2-annotation/Kodry.gtf.gz | 1-assembly/5-curate/Kd.fa.gz  |
+| Kokau | 2-annotation/Kokau.gtf.gz | 1-assembly/5-curate/Kk.fa.gz  |
+| Gokir | 2-annotation/Gokir.gtf.gz | 1-assembly/0-ref/kirkii.fa.gz |
+
 
 * Genespace
+
+- Get bed files
+  #+header: :var anno=anno
+  #+begin_src sh :tangle 1-genespace/bed/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+
+    cat <<<"$anno" |
+        while read name gtf fasta; do
+            zcat $ROOT/wgs/$gtf |
+                grep '^K' |
+                awk '$3 == "transcript" {print $1,$4,$5,$9}' \
+                    FS="\t" OFS="\t" > $DIR/1-genespace/bed/$name.bed
+        done
+  #+end_src
+
+  #+RESULTS:
+
+- Get peptide files
+  #+header: :var anno=anno
+  #+begin_src sh :tangle 1-genespace/peptide/run.sh
+    ROOT=$(git rev-parse --show-toplevel)
+    PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
+    PATH=$DIR/apps/samtools-1.17/:$PATH
+
+    cat <<<"$anno" |
+        while read name gtf fasta; do
+            tmp_fasta=$(mktemp)
+            tmp_gtf=$(mktemp)
+
+            zcat $ROOT/wgs/$fasta > $tmp_fasta
+            zcat $ROOT/wgs/$gtf |
+                grep '^K' > $tmp_gtf
+            
+            gffread -J -y $DIR/1-genespace/peptide/$name.fa \
+                    -g $tmp_fasta $tmp_gtf
+                                   
+            rm $tmp_fasta
+            rm $tmp_gtf
+        done
+  #+end_src
+- Run Genescape
+  #+begin_src R :tangle 1-genespace/run.R
+    library(GENESPACE)
+
+    gpar <- init_genespace(
+          wd = file.path(DIR, "1-genespace") ,
+          genomeIDs=c("Kocoo", "Kodry", "Kokau", "Gokir"), 
+          path2mcscanx = file.path(DIR, "apps", "MCScanX"),
+          path2orthofinder = file.path(DIR, "apps", "orthofinder"),
+          path2diamond = file.path(DIR, "apps", "diamond"),
+          nCores = 48)
+
+    out <- run_genespace(gpar)
+    
+  #+end_src
+
 
 * Hi-C
 
@@ -64,17 +113,34 @@ genomes to validate SV found in genespace.
 
 - Graph
   #+begin_src sh :tangle 2-hic/2-viz/run.sh
+    ml gd/
     PATH=$DIR/apps/hic-viz:$PATH
     PATH=$DIR/apps/samtools-1.17/bin:$PATH
 
-    for name in {Gk,Kc,Kd,Kk}-{Kc,Kd,Kk}; do
+    for name in {Gk,Kc,Kd,Kk}-Kk; do
         bam=$DIR/2-hic/1-bwa/$name.bam
-        hic-viz $bam > $DIR/2-hic/2-viz/$name.png
-        #samtools view -H $bam CREATE INDV CHR PNGs
-    done
+        echo hic-viz $bam '>' $DIR/2-hic/2-viz/$name.png
+        # samtools view -H $bam |
+        #     awk '$1 == "@SQ" { sub("SN:", "", $2); print $2 }' 
+    done | parallel
   #+end_src
 
 * BUSCO
+#+name:genomes
+| Name | Fasta                                                            |
+|------+------------------------------------------------------------------|
+| Kc   | 1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz                |
+| Kd   | 1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz |
+| Kk   | 1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz         |
+| Gk   | 1-assembly/0-ref/kirkii.fa.gz                                    |
+
+#+name:anno
+| Name | braker tar                    |
+|------+-------------------------------|
+| Kc   | 2-annotation/2-braker3/Kc.tar |
+| Kd   | 2-annotation/2-braker3/Kd.tar |
+| Kk   | 2-annotation/2-braker3/Kk.tar |
+| Gk   | 2-annotation/2-braker3/Gk.tar |
 
 - Get eudicot lineage
   #+begin_src sh :tangle 3-busco/download-lineage.sh
@@ -233,3 +299,32 @@ genomes to validate SV found in genespace.
     ggsave("busco.all.png", width=10, height=5, bg="white")
   #+end_src
   [[./busco.all.png]]
+
+    #+begin_src R :session kokia
+      library(tidyverse)
+      library(rjson)
+
+
+      paste(c("Gk", "Kc", "Kd", "Kk"),
+                    "genome", "json", sep=".") %>%
+        setNames(sub(".json", "", .)) %>%
+        lapply(function (file) fromJSON(file=file)$results) %>%
+        lapply(as.data.frame) %>%
+        bind_rows(.id="Species.type") %>%
+        separate(Species.type, into=c("Species", "Mode")) %>%
+        select(Species, Number.of.contigs, Total.length, Percent.gaps, Contigs.N50) %>%
+        mutate(Species = factor(Species, c("Gk", "Kc", "Kd", "Kk"),
+                                c("Gossypioides kirkii",
+                                  "Kokia cookei",
+                                  "Kokia drynarioides",
+                                  "Kokia kauaiensis")))
+
+  #+end_src
+
+| Species             | Number.of.contigs | Total.length | Percent.gaps | Contigs.N50 |
+|---------------------+-------------------+--------------+--------------+-------------|
+| Gossypioides kirkii |               288 |    538117542 |       0.005% |     8700000 |
+| Kokia cookei        |               745 |    524969409 |       0.332% |     1716024 |
+| Kokia drynarioides  |               780 |    511904237 |       0.015% |     1881333 |
+| Kokia kauaiensis    |               663 |    527234597 |       0.012% |     1538567 |
+

@@ -1,16 +1,16 @@
 RepeatModeler Version 2.0.5
 ===========================
-Using output directory = /local/scratch/tony.arick/13825999/RM_64628.MonNov201029512023
+Using output directory = /local/scratch/tony.arick/13895021/RM_101615.TueDec121322412023
 Search Engine = rmblast 2.14.1+
 Threads = 48
 Dependencies: TRF 4.09, RECON 1.08, RepeatScout 1.0.6, RepeatMasker 4.1.5
 LTR Structural Analysis: Enabled ( GenomeTools 1.6.4, LTR_Retriever v2.9.0,
                                    Ninja 0.97-cluster_only, MAFFT 7.471,
                                    CD-HIT 4.8.1 )
-Random Number Seed: 1700497790
-Database = /local/scratch/tony.arick/13825999/Gk.db   - Sequences = 12
+Random Number Seed: 1702408960
+Database = /local/scratch/tony.arick/13895021/Gk.db   - Sequences = 12
   - Bases = 538117542
-Storage Throughput = excellent ( 1486.14 MB/s )
+Storage Throughput = excellent ( 1462.33 MB/s )
 
 
 RepeatModeler Round # 1
@@ -18,12 +18,12 @@ RepeatModeler Round # 1
 Searching for Repeats
  -- Sampling from the database...
    - Gathering up to 40000000 bp
-   - Final Sample Size = 40003803 bp ( 40001303 non ambiguous )
+   - Final Sample Size = 40028133 bp ( 40026433 non ambiguous )
    - Num Contigs Represented = 12
    - Sequence extraction : 00:00:28 (hh:mm:ss) Elapsed Time
  -- Running RepeatScout on the sequences...
-   - RepeatScout: 00:06:23 (hh:mm:ss) Elapsed Time
-Round Time: 00:17:32 (hh:mm:ss) Elapsed Time : 581 families discovered.
+   - RepeatScout: 00:06:11 (hh:mm:ss) Elapsed Time
+Round Time: 00:25:33 (hh:mm:ss) Elapsed Time : 558 families discovered.
 
 
 RepeatModeler Round # 2
@@ -31,26 +31,26 @@ RepeatModeler Round # 2
 Searching for Repeats
  -- Sampling from the database...
    - Gathering up to 10000000 bp
-   - Sequence extraction : 00:00:07 (hh:mm:ss) Elapsed Time
+   - Sequence extraction : 00:00:08 (hh:mm:ss) Elapsed Time
  -- Running TRFMask on the sequence...
-   - TRFMask time 00:00:25 (hh:mm:ss) Elapsed Time
+   - TRFMask time 00:00:27 (hh:mm:ss) Elapsed Time
  -- Masking repeats from the previous rounds...
-       10083 repeats masked totaling 4556062 bp(s).
+       10439 repeats masked totaling 4657726 bp(s).
    - TE Masking time 00:00:13 (hh:mm:ss) Elapsed Time
  -- Sample Stats:
-       Sample Size 10000831 bp
+       Sample Size 10001013 bp
        Num Contigs Represented = 12
        Non ambiguous bp:
-             Initial: 10000331 bp
-             After Masking: 5264976 bp
-             Masked: 47.35 % 
- -- Input Database Coverage: 10000831 bp out of 538117542 bp ( 1.86 % )
-Sampling Time: 00:00:45 (hh:mm:ss) Elapsed Time
+             Initial: 10000713 bp
+             After Masking: 5107788 bp
+             Masked: 48.93 % 
+ -- Input Database Coverage: 10001013 bp out of 538117542 bp ( 1.86 % )
+Sampling Time: 00:00:49 (hh:mm:ss) Elapsed Time
 Running all-by-other comparisons...
   - Total Comparisons = 31125
-Comparison Time: 00:02:00 (hh:mm:ss) Elapsed Time, 15215 HSPs Collected
-Number of families returned by RECON: 1313
-Round Time: 00:03:02 (hh:mm:ss) Elapsed Time : 22 families discovered.
+Comparison Time: 00:01:59 (hh:mm:ss) Elapsed Time, 18684 HSPs Collected
+Number of families returned by RECON: 1389
+Round Time: 00:03:06 (hh:mm:ss) Elapsed Time : 21 families discovered.
 
 
 RepeatModeler Round # 3
@@ -60,24 +60,24 @@ Searching for Repeats
    - Gathering up to 30000000 bp
    - Sequence extraction : 00:00:21 (hh:mm:ss) Elapsed Time
  -- Running TRFMask on the sequence...
-   - TRFMask time 00:01:20 (hh:mm:ss) Elapsed Time
+   - TRFMask time 00:01:23 (hh:mm:ss) Elapsed Time
  -- Masking repeats from the previous rounds...
-       32826 repeats masked totaling 14085445 bp(s).
-   - TE Masking time 00:00:36 (hh:mm:ss) Elapsed Time
+       32676 repeats masked totaling 13999434 bp(s).
+   - TE Masking time 00:00:37 (hh:mm:ss) Elapsed Time
  -- Sample Stats:
-       Sample Size 30002892 bp
+       Sample Size 30027107 bp
        Num Contigs Represented = 12
        Non ambiguous bp:
-             Initial: 30000892 bp
-             After Masking: 15405713 bp
-             Masked: 48.65 % 
- -- Input Database Coverage: 40003723 bp out of 538117542 bp ( 7.43 % )
-Sampling Time: 00:02:19 (hh:mm:ss) Elapsed Time
+             Initial: 30025707 bp
+             After Masking: 15446753 bp
+             Masked: 48.55 % 
+ -- Input Database Coverage: 40028120 bp out of 538117542 bp ( 7.44 % )
+Sampling Time: 00:02:23 (hh:mm:ss) Elapsed Time
 Running all-by-other comparisons...
-  - Total Comparisons = 280875
-Comparison Time: 00:11:05 (hh:mm:ss) Elapsed Time, 87431 HSPs Collected
-Number of families returned by RECON: 4763
-Round Time: 00:15:30 (hh:mm:ss) Elapsed Time : 92 families discovered.
+  - Total Comparisons = 281625
+Comparison Time: 00:11:28 (hh:mm:ss) Elapsed Time, 112446 HSPs Collected
+Number of families returned by RECON: 4743
+Round Time: 00:16:15 (hh:mm:ss) Elapsed Time : 102 families discovered.
 
 
 RepeatModeler Round # 4
@@ -87,24 +87,24 @@ Searching for Repeats
    - Gathering up to 90000000 bp
    - Sequence extraction : 00:01:03 (hh:mm:ss) Elapsed Time
  -- Running TRFMask on the sequence...
-   - TRFMask time 00:04:02 (hh:mm:ss) Elapsed Time
+   - TRFMask time 00:04:15 (hh:mm:ss) Elapsed Time
  -- Masking repeats from the previous rounds...
-       107429 repeats masked totaling 45467476 bp(s).
-   - TE Masking time 00:02:16 (hh:mm:ss) Elapsed Time
+       107690 repeats masked totaling 44785196 bp(s).
+   - TE Masking time 00:02:18 (hh:mm:ss) Elapsed Time
  -- Sample Stats:
-       Sample Size 90030671 bp
+       Sample Size 90030478 bp
        Num Contigs Represented = 12
        Non ambiguous bp:
-             Initial: 90026691 bp
-             After Masking: 43043439 bp
-             Masked: 52.19 % 
- -- Input Database Coverage: 130034394 bp out of 538117542 bp ( 24.16 % )
-Sampling Time: 00:07:26 (hh:mm:ss) Elapsed Time
+             Initial: 90025278 bp
+             After Masking: 43647260 bp
+             Masked: 51.52 % 
+ -- Input Database Coverage: 130058598 bp out of 538117542 bp ( 24.17 % )
+Sampling Time: 00:07:41 (hh:mm:ss) Elapsed Time
 Running all-by-other comparisons...
-  - Total Comparisons = 2536878
-Comparison Time: 01:07:10 (hh:mm:ss) Elapsed Time, 364385 HSPs Collected
-Number of families returned by RECON: 14506
-Round Time: 01:22:20 (hh:mm:ss) Elapsed Time : 386 families discovered.
+  - Total Comparisons = 2534626
+Comparison Time: 01:09:19 (hh:mm:ss) Elapsed Time, 407596 HSPs Collected
+Number of families returned by RECON: 14251
+Round Time: 01:27:52 (hh:mm:ss) Elapsed Time : 379 families discovered.
 
 
 RepeatModeler Round # 5
@@ -114,39 +114,39 @@ Searching for Repeats
    - Gathering up to 270000000 bp
    - Sequence extraction : 00:03:08 (hh:mm:ss) Elapsed Time
  -- Running TRFMask on the sequence...
-   - TRFMask time 00:12:11 (hh:mm:ss) Elapsed Time
+   - TRFMask time 00:12:08 (hh:mm:ss) Elapsed Time
  -- Masking repeats from the previous rounds...
-       378292 repeats masked totaling 157151349 bp(s).
-   - TE Masking time 00:12:01 (hh:mm:ss) Elapsed Time
+       388376 repeats masked totaling 157679858 bp(s).
+   - TE Masking time 00:11:54 (hh:mm:ss) Elapsed Time
  -- Sample Stats:
-       Sample Size 270031816 bp
+       Sample Size 270044344 bp
        Num Contigs Represented = 12
        Non ambiguous bp:
-             Initial: 270016752 bp
-             After Masking: 108465026 bp
-             Masked: 59.83 % 
- -- Input Database Coverage: 400066210 bp out of 538117542 bp ( 74.35 % )
-Sampling Time: 00:27:34 (hh:mm:ss) Elapsed Time
+             Initial: 270030760 bp
+             After Masking: 107947720 bp
+             Masked: 60.02 % 
+ -- Input Database Coverage: 400102942 bp out of 538117542 bp ( 74.35 % )
+Sampling Time: 00:27:24 (hh:mm:ss) Elapsed Time
 Running all-by-other comparisons...
-  - Total Comparisons = 22791376
-Comparison Time: 06:54:34 (hh:mm:ss) Elapsed Time, 919399 HSPs Collected
-Number of families returned by RECON: 43215
-Round Time: 08:05:34 (hh:mm:ss) Elapsed Time : 928 families discovered.
+  - Total Comparisons = 22798128
+Comparison Time: 06:58:43 (hh:mm:ss) Elapsed Time, 886405 HSPs Collected
+Number of families returned by RECON: 41824
+Round Time: 08:03:01 (hh:mm:ss) Elapsed Time : 901 families discovered.
 
-RepeatScout/RECON discovery complete: 2009 families found
+RepeatScout/RECON discovery complete: 1961 families found
 
 
 LTR Structural Analysis
 =======================
   -- Clustering results with previous rounds...
-       - 2009 RepeatScout/RECON families
+       - 1961 RepeatScout/RECON families
        - 702 LTRPipeline families
        - Removed 223 redundant LTR families.
-       - Final family count = 2488
-LTRPipeline Time: 01:21:07 (hh:mm:ss) Elapsed Time
+       - Final family count = 2440
+LTRPipeline Time: 01:21:02 (hh:mm:ss) Elapsed Time
 
 
-Classification Time: 02:20:13 (hh:mm:ss) Elapsed Time
+Classification Time: 02:16:19 (hh:mm:ss) Elapsed Time
 
 
-Program Time: 13:45:19 (hh:mm:ss) Elapsed Time
+Program Time: 13:53:08 (hh:mm:ss) Elapsed Time

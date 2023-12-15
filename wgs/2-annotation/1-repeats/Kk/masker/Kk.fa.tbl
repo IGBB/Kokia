@@ -1,51 +1,51 @@
 ==================================================
 file name: Kk.fa                    
-sequences:            12
-total length:  527234597 bp  (527169497 bp excl N/X-runs)
-GC level:         33.05 %
-bases masked:  334242971 bp ( 63.40 %)
+sequences:          1031
+total length:  556827260 bp  (556720960 bp excl N/X-runs)
+GC level:         33.17 %
+bases masked:  356928222 bp ( 64.10 %)
 ==================================================
                number of      length   percentage
                elements*    occupied  of sequence
 --------------------------------------------------
-Retroelements       176863    171791692 bp   32.58 %
-   SINEs:             1184       345419 bp    0.07 %
+Retroelements       183708    177705123 bp   31.91 %
+   SINEs:              407      1166350 bp    0.21 %
    Penelope:             0            0 bp    0.00 %
-   LINEs:            20501     13224234 bp    2.51 %
+   LINEs:            22719     12770956 bp    2.29 %
     CRE/SLACS            0            0 bp    0.00 %
      L2/CR1/Rex          0            0 bp    0.00 %
-     R1/LOA/Jockey       0            0 bp    0.00 %
+     R1/LOA/Jockey      10        19472 bp    0.00 %
      R2/R4/NeSL          0            0 bp    0.00 %
-     RTE/Bov-B           0            0 bp    0.00 %
-     L1/CIN4         20501     13224234 bp    2.51 %
-   LTR elements:    155178    158222039 bp   30.01 %
+     RTE/Bov-B         157        45479 bp    0.01 %
+     L1/CIN4         22552     12706005 bp    2.28 %
+   LTR elements:    160582    163767817 bp   29.41 %
      BEL/Pao             0            0 bp    0.00 %
-     Ty1/Copia       47706     37778288 bp    7.17 %
-     Gypsy/DIRS1     77010    109948490 bp   20.85 %
-       Retroviral        0            0 bp    0.00 %
+     Ty1/Copia       50182     39286185 bp    7.06 %
+     Gypsy/DIRS1     75553    113276647 bp   20.34 %
+       Retroviral      224        69665 bp    0.01 %
 
-DNA transposons      15483     10637446 bp    2.02 %
-   hobo-Activator     1663       988321 bp    0.19 %
-   Tc1-IS630-Pogo      261        78951 bp    0.01 %
+DNA transposons      18619     11463503 bp    2.06 %
+   hobo-Activator     3323      1544574 bp    0.28 %
+   Tc1-IS630-Pogo       53        43328 bp    0.01 %
    En-Spm                0            0 bp    0.00 %
-   MULE-MuDR          9804      7848759 bp    1.49 %
+   MULE-MuDR          8029      6955797 bp    1.25 %
    PiggyBac              0            0 bp    0.00 %
-   Tourist/Harbinger  1761       813542 bp    0.15 %
+   Tourist/Harbinger  1871      1090710 bp    0.20 %
    Other (Mirage,        0            0 bp    0.00 %
     P-element, Transib)
 
-Rolling-circles       1821      1185517 bp    0.22 %
+Rolling-circles       3102       919909 bp    0.17 %
 
-Unclassified:       536020    144751653 bp   27.45 %
+Unclassified:       566175    157139173 bp   28.22 %
 
-Total interspersed repeats:   327180791 bp   62.06 %
+Total interspersed repeats:   346307799 bp   62.19 %
 
 
-Small RNA:            1087       541961 bp    0.10 %
+Small RNA:            4026      4075221 bp    0.73 %
 
-Satellites:             90        38928 bp    0.01 %
-Simple repeats:     101739      4094968 bp    0.78 %
-Low complexity:      25369      1304899 bp    0.25 %
+Satellites:            185       253844 bp    0.05 %
+Simple repeats:     106899      4373854 bp    0.79 %
+Low complexity:      26449      1367580 bp    0.25 %
 ==================================================
 
 * most repeats fragmented by insertions or deletions
