@@ -117,11 +117,9 @@ genomes to validate SV found in genespace.
     PATH=$DIR/apps/hic-viz:$PATH
     PATH=$DIR/apps/samtools-1.17/bin:$PATH
 
-    for name in {Gk,Kc,Kd,Kk}-Kk; do
+    for name in {Gokir,Kocoo,Kodry,Kokau}-{Kocoo,Kodry,Kokau}; do
         bam=$DIR/2-hic/1-bwa/$name.bam
         echo hic-viz $bam '>' $DIR/2-hic/2-viz/$name.png
-        # samtools view -H $bam |
-        #     awk '$1 == "@SQ" { sub("SN:", "", $2); print $2 }' 
     done | parallel
   #+end_src
 
