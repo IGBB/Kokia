@@ -1,5 +1,5 @@
 #+TITLE: Annotation
-#+PROPERTY:  header-args :var DIR=(my/dir)
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
 #+name:genomes
 | Name | Fasta                         |
@@ -157,3 +157,91 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
     ggsave('gene-counts.png', width=12, height=4, bg='white')
   #+end_src
 [[./gene-counts.png]]
+*  InterproScan
+
+Download latest version of iprscan: [[https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.65-97.0/interproscan-5.65-97.0-64-bit.tar.gz][5.65-97.0]]
+#+begin_src sh
+IPRSCAN_URL=https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5
+cd $DIR/apps
+wget $IPRSCAN_URL/5.65-97.0/interproscan-5.65-97.0-64-bit.tar.gz
+
+ml singularity
+singularity pull docker://interpro/interproscan:5.65-97.0
+#+end_src
+Initial IPR Setup 
+#+begin_src sh
+IPRDATA=$DIR/apps/interproscan-5.65-97.0/data
+singularity exec \
+    -B $IPRDATA:/opt/interproscan/data -B $DIR \
+    $DIR/apps/interproscan_5.65-97.0.sif \
+    cd /opt/interproscan && \
+    python3 setup.py -f interproscan.properties
+ 
+#+end_src
+
+Get protein sequences from renamed gtf file
+#+header: :var genomes=genomes
+#+begin_src sh :tangle 4-iprscan/peptides.sh
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
+PATH=$DIR/apps/samtools-1.17/:$PATH
+
+declare -A names
+names["Kc"]="Kocoo"
+names["Kk"]="Kokau"
+names["Kd"]="Kodry"
+names["Gk"]="Gokir"
+
+for name in ${!genomes[@]}; do
+    tmp_fasta=$(mktemp)
+    tmp_gtf=$(mktemp)
+
+    zcat $ROOT/wgs/${genomes[$name]} > $tmp_fasta
+    zcat $DIR/${names[$name]}.gtf.gz > $tmp_gtf
+
+    gffread -J -y $DIR/4-iprscan/$name.pep.fa \
+        -g $tmp_fasta $tmp_gtf
+
+    rm $tmp_fasta
+    rm $tmp_gtf
+
+    samtools faidx $DIR/4-iprscan/$name.pep.fa
+done
+#+end_src
+
+Run iprscan on protein sequences. Sequences will be split into 20 batches each
+#+begin_src sh :tangle 4-iprscan/run.sh
+ml singularity
+
+PATH=$DIR/apps/samtools-1.17/:$PATH
+PATH=$DIR/apps/interproscan-5.65-97.0/:$PATH
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+# Set spec with --export=spec=Kd
+
+PREFIX=$spec.pep.$SLURM_ARRAY_TASK_ID
+
+split -n "l/$SLURM_ARRAY_TASK_ID/20" $DIR/4-iprscan/$spec.pep.fa.fai |
+    cut -f 1 |
+    samtools faidx -r - $DIR/4-iprscan/$spec.pep.fa \
+        > $SCRATCH/$PREFIX.fa
+
+IPRDATA=$DIR/apps/interproscan-5.65-97.0/data
+singularity exec \
+    -B $IPRDATA:/opt/interproscan/data -B $DIR \
+    $DIR/apps/interproscan_5.65-97.0.sif \
+    /opt/interproscan/interproscan.sh \
+    -i $SCRATCH/$PREFIX.fa \
+    -f xml,tsv \
+    -pathways \
+    -iprlookup \
+    -goterms \
+    -dp  \
+    -appl 'Pfam, PRINTS, PANTHER, TIGRFAM, SUPERFAMILY, PIRSF, ProSiteProfiles, ProSitePatterns, SMART' \
+    -b $SCRATCH/$PREFIX \
+    -cpu $SLURM_CPUS_PER_TASK \
+    > $DIR/4-iprscan/$PREFIX.log
+
+mv $SCRATCH/$PREFIX.{tsv,xml} $DIR/4-iprscan/
+#+end_src

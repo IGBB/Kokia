@@ -268,5 +268,3 @@ genomes to validate SV found in genespace.
 | Kokia cookei        |        2300 |    563551662 |       0.017% |    1771125 |
 | Kokia drynarioides  |         780 |    511904237 |       0.015% |    1881333 |
 | Kokia kauaiensis    |        2094 |    556827260 |       0.019% |    1469000 |
-
-

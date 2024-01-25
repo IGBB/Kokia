@@ -1,0 +1,81 @@
+#+title: Readme
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
+
+* Assembly Stats
+
+Using [[https://github.com/MikeTrizna/assembly_stats][assembly_stats]]
+
+#+begin_src sh 
+assembly_stats \
+    <( zcat $DIR/../1-assembly/Kokia_drynarioides_JFW-HI/*.gz )
+assembly_stats <( zcat $DIR/../1-assembly/5-curate/Kk.fa.gz )
+assembly_stats <( zcat $DIR/../1-assembly/5-curate/Kc.fa.gz )
+#+end_src
+* Heterzygousity
+
+Using clair3 (v1.0.5) and vcftools to quickly get heterozygosity
+
+Download the appropriate models from [[https://github.com/nanoporetech/rerio/][ONT rerio github]]
+https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/r1041_e82_260bps_sup_v410.tar.gz
+
+#+name:models
+| Name | Model                     |
+|------+---------------------------|
+| Kc   | r1041_e82_260bps_sup_v410 |
+| Kk   | r1041_e82_260bps_sup_v410 |
+| Kd   | r941_prom_sup_g5014       |
+
+
+- Run Clair3
+  #+header: :var genomes=../3-centromere/readme.org:genomes
+  #+header: :var models=models
+  #+begin_src sh :tangle 2-hetero/run.sh
+ml singularity
+ROOT=$(git rev-parse --show-toplevel)
+
+PATH=$DIR/apps/samtools-1.19/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+# Set spec with --export=spec=Kd
+
+zcat $ROOT/wgs/${genomes[$spec]} > $SCRATCH/$spec.all.fa
+samtools faidx $SCRATCH/$spec.all.fa \
+    ${spec}_{01,2_4,03} ${spec}_{05..13} \
+    > $SCRATCH/$spec.chr.fa
+
+samtools faidx $SCRATCH/$spec.chr.fa \
+
+R10MODEL=r1041_e82_260bps_sup_v410
+
+model="/opt/models/${models[$spec]}"
+
+singularity exec -B $ROOT -B $SCRATCH \
+  -B $DIR/apps/$R10MODEL:/opt/models/$R10MODEL \
+  -B /lib64/libcrypto.so.1.0.2k:/opt/conda/envs/clair3/lib/libcrypto.so.10 \
+  --env=CONDA_PREFIX="/opt/conda/envs/clair3/" \
+  --env=LD_LIBRARY_PATH="\$LD_LIBRARY_PATH:/opt/conda/envs/clair3/lib" \
+    $DIR/apps/clair3_latest.sif \
+    /opt/bin/run_clair3.sh \
+  --bam_fn=$ROOT/wgs/3-centromere/1-meth/2-combine/$spec.bam \
+  --ref_fn=$SCRATCH/$spec.chr.fa \
+  --threads=$SLURM_CPUS_PER_TASK \
+  --platform="ont" \
+  --model_path="$model" \
+  --output=$DIR/2-hetero/$spec \
+  --include_all_ctgs \
+  --no_phasing_for_fa
+  #+end_src
+
+- Run vcftools
+    https://github.com/vcftools/vcftools/releases/download/v0.1.16/vcftools-0.1.16.tar.gz
+
+    #+begin_src sh :tangle 2-hetero/2-vcftools/run.sh
+PATH=$DIR/apps/vcftools-0.1.16/bin/:$PATH
+PATH=$DIR/apps/samtools-1.19/:$PATH
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+vcftools --gzvcf $DIR/2-hetero/$spec/merge_output.vcf.gz \
+    --out $DIR/2-hetero/2-vcftools/$spec \
+    --het
+    #+end_src

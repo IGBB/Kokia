@@ -1,476 +1,268 @@
 #+title: Centromere Location
-#+PROPERTY:  header-args :var DIR=(my/dir)
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
-The centromere locations have been shown to be hypomethylated
-surrounded by regions of hypermethylations in mouse ([[https://doi.org/10.1371%2Fjournal.pgen.0020017][Wong et
-al. 2006]]), arabidobisis and maize ([[https://academic.oup.com/plcell/article/20/1/25/6091186][Zhang, et al. 2008]]), and medaka
-([[https://www.nature.com/articles/s41467-017-01982-7][Ichikawa, et al. 2017]]). The inter-chromosome interactions found in
-the Hi-C data peak around the centromere ([[https://academic.oup.com/nar/article/43/11/5331/1171025][Varoquaux, et al. 2015]]) as
-well. Combining the two datasets may give a better picture of the
-centromeres.
+The centromere locations have been shown to be hypomethylated surrounded by regions of hypermethylations in mouse ([[https://doi.org/10.1371%2Fjournal.pgen.0020017][Wong et al. 2006]]), arabidobisis and maize ([[https://academic.oup.com/plcell/article/20/1/25/6091186][Zhang, et al. 2008]]), and medaka ([[https://www.nature.com/articles/s41467-017-01982-7][Ichikawa, et al. 2017]]). The inter-chromosome interactions found in the Hi-C data peak around the centromere ([[https://academic.oup.com/nar/article/43/11/5331/1171025][Varoquaux, et al. 2015]]) as well. Combining the two datasets may give a better picture of the centromeres.
 
 #+begin_quote
-Here, we report that the 178-bp repeats associated with the
-CENH3-containing chromatin (CEN chromatin) are hypomethylated compared
-with the same repeats located in the flanking pericentromeric
-regions. A similar hypomethylation of DNA in CEN chromatin was also
-revealed in maize (Zea mays).
+Here, we report that the 178-bp repeats associated with the CENH3-containing chromatin (CEN chromatin) are hypomethylated compared with the same repeats located in the flanking pericentromeric regions. A similar hypomethylation of DNA in CEN chromatin was also revealed in maize (Zea mays).
 
-
-Wenli Zhang, Hye-Ran Lee, Dal-Hoe Koo, Jiming Jiang, Epigenetic
-Modification of Centromeric Chromatin: Hypomethylation of DNA
-Sequences in the CENH3-Associated Chromatin in Arabidopsis thaliana
-and Maize, The Plant Cell, Volume 20, Issue 1, January 2008, Pages
-25–34, https://doi.org/10.1105/tpc.107.057083
+Wenli Zhang, Hye-Ran Lee, Dal-Hoe Koo, Jiming Jiang, Epigenetic Modification of Centromeric Chromatin: Hypomethylation of DNA Sequences in the CENH3-Associated Chromatin in Arabidopsis thaliana and Maize, The Plant Cell, Volume 20, Issue 1, January 2008, Pages 25–34, https://doi.org/10.1105/tpc.107.057083
 #+end_quote
 
 #+begin_quote
-[W]e uncover centromeres are mostly hypermethylated but have
-hypomethylated sub-regions that acquire unique sequence compositions
-independently.
+[W]e uncover centromeres are mostly hypermethylated but have hypomethylated sub-regions that acquire unique sequence compositions independently.
 
-Ichikawa, K., Tomioka, S., Suzuki, Y. et al. Centromere evolution and
-CpG methylation during vertebrate speciation. Nat Commun 8, 1833
-(2017). https://doi.org/10.1038/s41467-017-01982-7
+Ichikawa, K., Tomioka, S., Suzuki, Y. et al. Centromere evolution and CpG methylation during vertebrate speciation. Nat Commun 8, 1833 (2017). https://doi.org/10.1038/s41467-017-01982-7
 #+end_quote
 
 #+begin_quote
-The observed hypermethylation was consistent with the presence of a
-presumed transcriptionally silent chromatin state at the
-neocentromere. Within this neocentric chromatin, specific sites of
-active transcription and the centromeric chromatin boundary are
-defined by DNA hypomethylation.
+The observed hypermethylation was consistent with the presence of a presumed transcriptionally silent chromatin state at the neocentromere. Within this neocentric chromatin, specific sites of active transcription and the centromeric chromatin boundary are defined by DNA hypomethylation.
 
-Wong NC, Wong LH, Quach JM, Canham P, Craig JM, Song JZ, Clark SJ,
-Choo KH. Permissive transcriptional activity at the centromere through
-pockets of DNA hypomethylation. PLoS Genet. 2006 Feb;2(2):e17. doi:
-10.1371/journal.pgen.0020017. Epub 2006 Feb 10. PMID: 16477312; PMCID:
-PMC1361766.
+Wong NC, Wong LH, Quach JM, Canham P, Craig JM, Song JZ, Clark SJ, Choo KH. Permissive transcriptional activity at the centromere through pockets of DNA hypomethylation. PLoS Genet. 2006 Feb;2(2):e17. doi: 10.1371/journal.pgen.0020017. Epub 2006 Feb 10. PMID: 16477312; PMCID: PMC1361766.
 #+end_quote
+
+
+#+name:genomes
+| Name | Fasta                         |
+|------+-------------------------------|
+| Kc   | 1-assembly/5-curate/Kc.fa.gz  |
+| Kd   | 1-assembly/5-curate/Kd.fa.gz  |
+| Kk   | 1-assembly/5-curate/Kk.fa.gz  |
 
 * Methylation
-** Kc
-- extract files and create file lists
-  #+header: :var flowcells=../0-raw/readme.org:kc-nanopore-runs
-   #+begin_src sh :tangle kc/1-meth/fast5/extract.sh
-    RAW=$(realpath $DIR/../0-raw/)
 
-    cat <<<"$flowcells" |
-        while read ID LOC; do
-            for file in $RAW/$LOC/fast5_{all,tmp}.tar; do
-                [ -e $file ] && echo $file
-            done
-        done |
-        parallel -j 4 --eta tar --strip=1 --show-transformed \
-                 -C $DIR/kc/1-meth/fast5/ -vxf {} '*.fast5' |
-        awk '{printf "%s/kc/1-meth/fast5/%s\n", dir, $0}' \
-            dir=$DIR > $DIR/kc/1-meth/fast5/files.lst
+#+name:models
+| Name | Model                              |
+|------+------------------------------------|
+| Kc   | dna_r10.4.1_e8.2_260bps_sup@v4.1.0 |
+| Kk   | dna_r10.4.1_e8.2_260bps_sup@v4.1.0 |
+| Kd   | dna_r9.4.1_e8_sup@v3.3             |
+
+** Extract raw files
+Extract the fast5 files from tar files. Validate each fast5 file since =dorado= dies without output when it encounters an invalid file.
+
+#+header: :var Kc=../0-raw/readme.org:kc-nanopore-runs
+#+header: :var Kd=../0-raw/readme.org:kd-nanopore-runs
+#+header: :var Kk=../0-raw/readme.org:kk-nanopore-runs
+#+begin_src sh :tangle 1-meth/0-extract/run.sh
+RAW=$(realpath $DIR/../0-raw/)
+
+species=(Kc Kd Kk)
+spec=${species[$SLURM_ARRAY_TASK_ID]}
+flowcells=$spec[@]
+
+mkdir $DIR/1-meth/0-extract/$spec
+
+for LOC in ${!flowcells}; do
+    for file in $RAW/$LOC/fast5_{pass,fail,skip,all,tmp}.tar; do
+        [ -e $file ] && echo $file
+    done
+done |
+    parallel -j 4 --eta --line-buffer \
+        tar --strip=1 --show-transformed \
+        -C $DIR/1-meth/0-extract/$spec -vxf {} '*.fast5' |
+    awk '{printf "%s/1-meth/0-extract/%s/%s\n", dir, spec, $0}' \
+        dir=$DIR spec=$spec |
+    while read file; do
+        h5_validate multi_read_fast5.yaml $file > /dev/null &&
+            echo $file
+    done > $DIR/1-meth/0-extract/$spec.lst
+#+end_src
+** Run Dorado (MIG)
+
+Run dorado on the extracted fast5 files. dorado dies randomly reading from the network fs. Copying data to the local fs before running. Also only using the chrs as reference.
+
+#+header: :var genomes=genomes
+#+header: :var models=models
+#+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=64Gb --array=1-90 --time=36:00:00"
+#+begin_src sh :tangle 1-meth/1-dorado/call.sh
+PATH=$DIR/apps/samtools-1.17/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+# Set spec with --export=spec=Kd
+
+zcat $DIR/../${genomes[$spec]} > $SCRATCH/$spec.all.fa
+samtools faidx $SCRATCH/$spec.all.fa \
+    ${spec}_{01,2_4,03} ${spec}_{05..13} \
+    > $SCRATCH/$spec.chr.fa
+
+split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/1-meth/0-extract/$spec.lst |
+    xargs cp -v -t $SCRATCH
+
+DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
+PATH=$DORADO_DIR/bin/:$PATH
+model="$DORADO_DIR/models/${models[$spec]}"
+
+dorado basecaller $model $SCRATCH \
+    --reference $SCRATCH/$spec.chr.fa \
+    --modified-bases 5mCG_5hmCG \
+    > $DIR/1-meth/1-dorado/$spec.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
   #+end_src
 
-- Run (MIG)
-  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=64Gb --array=1-90 --time=36:00:00"
-    #+begin_src sh :tangle kc/1-meth/2-split/call.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
-    mkdir $SCRATCH
+** Combine and Sort
+  #+begin_src sh :tangle 1-meth/2-combine/run.sh
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
 
-    zcat $DIR/../1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz \
-         > $SCRATCH/Kc.fa
-    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kc/1-meth/fast5/files.lst |
-        xargs cp -v -t $SCRATCH
+# Set spec with --export=spec=Kd
 
-    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
-    PATH=$DORADO_DIR/bin/:$PATH
-    model="$DORADO_DIR/models/dna_r10.4.1_e8.2_260bps_sup@v4.1.0"
-
-    dorado basecaller $model $SCRATCH \
-        --reference $SCRATCH/Kc.fa \
-        --modified-bases 5mCG_5hmCG \
-        > $DIR/kc/1-meth/2-split/Kc.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
+samtools cat $DIR/1-meth/1-dorado/$spec.5mCG-5hmCG.{1..90}.bam |
+    samtools sort -m 500G -o $DIR/1-meth/2-combine/$spec.bam -
+samtools index $DIR/1-meth/2-combine/$spec.bam
 #+end_src
 
-- Combine and Sort
-  #+begin_src sh :tangle kc/1-meth/3-combine.sh
-    PATH=$DIR/apps/samtools-1.17/:$PATH
+** Modkit
+:PROPERTIES:
+:ID:       69002216-60ea-4da5-a31d-3c2d7f4e5ec8
+:END:
 
-    samtools cat $DIR/kc/1-meth/2-split/Kc.5mCG-5hmCG.{1..90}.bam |
-        samtools sort -m 500G -o $DIR/kc/1-meth/3-combine.kc.bam -
-    samtools index $DIR/kc/1-meth/3-combine.kc.bam
+Downloaded v0.2.4 from [[https://github.com/nanoporetech/modkit/releases/download/v0.2.4/modkit_v0.2.4_centos7_x86_64.tar.gz][github repo]]
+
+#+header: :var genomes=genomes
+#+begin_src sh :tangle 1-meth/3-modkit/run.sh
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
+PATH=$DIR/apps/modkit_v0.2.4/:$PATH
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+# Set spec with --export=spec=Kd
+
+zcat $DIR/../${genomes[$spec]} > $SCRATCH/$spec.all.fa
+samtools faidx $SCRATCH/$spec.all.fa \
+    ${spec}_{01,2_4,03} ${spec}_{05..13} \
+    > $SCRATCH/$spec.chr.fa
+
+# modbam2bed --aggregate -p $DIR/1-meth/3-modbam2bed/$spec \
+#     -e --combine --cpg --chh --chg -t 48 \
+#     $SCRATCH/$spec.chr.fa $DIR/1-meth/2-combine/$spec.bam
+
+modkit pileup $DIR/1-meth/2-combine/$spec.bam \
+    $DIR/1-meth/3-modkit/$spec.bed \
+    --ref $SCRATCH/$spec.chr.fa \
+    --preset traditional \
+    --threads 48
+
 #+end_src
 
-- ModBam2Bed
-  #+begin_src sh :tangle kc/1-meth/4-modbam2bed.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
-    PATH=$DIR/apps/modbam2bed/:$PATH
-
-    zcat $DIR/../1-assembly/Kokia_cookei_C69/Kokia_cookei.fasta.gz \
-         > $SCRATCH/Kc.fa
-
-     modbam2bed --aggregate -p $DIR/kc/1-meth/4-full.modbam \
-                -e --combine --cpg --chh --chg -t 48 \
-                 $SCRATCH/Kc.fa $DIR/kc/1-meth/3-combine.kc.bam
-#+end_src
-
-** Kk
-- extract files and create file lists
-  #+header: :var flowcells=../0-raw/readme.org:kk-nanopore-runs
-   #+begin_src sh :tangle kk/1-meth/fast5/extract.sh
-    RAW=$(realpath $DIR/../0-raw/)
-
-    cat <<<"$flowcells" |
-        while read ID LOC; do 
-            tar --strip=1 --show-transformed \
-                -C $DIR/kk/1-meth/fast5/ -vxf $RAW/$LOC/fast5_all.tar '*.fast5'
-        done |
-        awk '{printf "%s/kk/1-meth/fast5/%s\n", dir, $0}' \
-            dir=$DIR > $DIR/kk/1-meth/fast5/files.lst
-  #+end_src
-
-- Run (MIG)
-  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=64Gb --array=1-90 --time=36:00:00"
-    #+begin_src sh :tangle kk/1-meth/2-split/call.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
-    mkdir $SCRATCH
-
-    zcat $DIR/../1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz \
-         > $SCRATCH/Kk.fa
-    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kk/1-meth/fast5/files.lst |
-        xargs cp -v -t $SCRATCH
-
-    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
-    PATH=$DORADO_DIR/bin/:$PATH
-    model="$DORADO_DIR/models/dna_r10.4.1_e8.2_260bps_sup@v4.1.0"
-
-    dorado basecaller $model $SCRATCH \
-        --reference $SCRATCH/Kk.fa \
-        --modified-bases 5mCG_5hmCG \
-        > $DIR/kk/1-meth/2-split/Kk.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
-#+end_src
-
-- Combine and Sort
-  #+begin_src sh :tangle kk/1-meth/3-combine.sh
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-
-    samtools cat $DIR/kk/1-meth/2-split/Kk.5mCG-5hmCG.{1..90}.bam |
-        samtools sort -m 500G -o $DIR/kk/1-meth/3-combine.kk.bam -
-    samtools index $DIR/kk/1-meth/3-combine.kk.bam
-#+end_src
-
-- ModBam2Bed
-  #+begin_src sh :tangle kk/1-meth/4-modbam2bed.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
-    PATH=$DIR/apps/modbam2bed/:$PATH
-
-    zcat $DIR/../1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz \
-         > $SCRATCH/Kk.fa
-
-     modbam2bed --aggregate -p $DIR/kk/1-meth/4-full.modbam \
-                -e --combine --cpg --chh --chg -t 48 \
-                 $SCRATCH/Kk.fa $DIR/kk/1-meth/3-combine.kk.bam
-#+end_src
-
-** Kd
-- extract files and create file lists
-  #+header: :var flowcells=../0-raw/readme.org:kd-nanopore-runs
-   #+begin_src sh :tangle kd/1-meth/fast5/extract.sh
-    RAW=$(realpath $DIR/../0-raw/)
-
-    cat <<<"$flowcells" |
-        while read ID LOC; do
-            for file in $RAW/$LOC/fast5_{pass,fail,skip}.tar; do
-                [ -e $file ] && echo $file
-            done
-        done |
-        parallel -j 4 --eta tar --strip=1 --show-transformed \
-                -C $DIR/kd/1-meth/fast5/ -vxf {} '*.fast5' |
-        awk '{printf "%s/kd/1-meth/fast5/%s\n", dir, $0}' \
-            dir=$DIR > $DIR/kd/1-meth/fast5/files.lst
-  #+end_src
-
-- Run (MIG)
-  #+header: :prologue "#SBATCH --partition=gpu-a100 --gres=gpu:a100_1g.10gb:1 --mem=128Gb --array=1-90 --time=36:00:00"
-        #+begin_src sh :tangle kd/1-meth/2-split/call.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/$SLURM_ARRAY_TASK_ID
-    mkdir $SCRATCH
-
-    ml python/3.9
-
-    zcat $DIR/../1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz \
-         > $SCRATCH/Kd.fa
-    split -n "l/$SLURM_ARRAY_TASK_ID/90" $DIR/kd/1-meth/fast5/files.lst |
-        grep -v '^#' |
-        while read file; do
-             h5_validate multi_read_fast5.yaml $file > /dev/null &&
-                 echo $file
-        done |
-        xargs cp -v -t $SCRATCH
-
-    DORADO_DIR=$DIR/apps/dorado-0.4.1-linux-x64
-    PATH=$DORADO_DIR/bin/:$PATH
-    model="$DORADO_DIR/models/dna_r9.4.1_e8_sup@v3.3"
-
-    dorado basecaller $model $SCRATCH \
-        --reference $SCRATCH/Kd.fa \
-        --modified-bases 5mCG_5hmCG \
-        > $DIR/kd/1-meth/2-split/Kd.5mCG-5hmCG.$SLURM_ARRAY_TASK_ID.bam
-#+end_src
-
-- Combine and Sort
-  #+begin_src sh :tangle kd/1-meth/3-combine.sh
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-
-    samtools cat $DIR/kd/1-meth/2-split/Kd.5mCG-5hmCG.{1..90}.bam |
-        samtools sort -m 500G -o $DIR/kd/1-meth/3-combine.kd.bam -
-    samtools index $DIR/kd/1-meth/3-combine.kd.bam
-#+end_src
-
-- ModBam2Bed
-  #+begin_src sh :tangle kd/1-meth/4-modbam2bed.sh
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID
-    PATH=$DIR/apps/modbam2bed/:$PATH
-
-    zcat  $DIR/../1-assembly/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz  \
-         > $SCRATCH/Kd.fa
-
-     modbam2bed --aggregate -p $DIR/kd/1-meth/4-full.modbam \
-                -e --combine --cpg --chh --chg -t 48 \
-                 $SCRATCH/Kd.fa $DIR/kd/1-meth/3-combine.kd.bam
-#+end_src
+#+RESULTS:
 
 * Hi-C inter-chr interactions
+#+name: hic
+| Name | Forward                                              | Reverse                                              |
+|------+------------------------------------------------------+------------------------------------------------------|
+| Kc   | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_1.fq.gz | Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_2.fq.gz |
+| Kd   | kd/hi-c/kokia_S3HiC_R1.fastq.gz                      | kd/hi-c/kokia_S3HiC_R2.fastq.gz                      |
+| Kk   | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_1.fq.gz | Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_2.fq.gz |
 
-** Kk
-- Create database
-  #+begin_src sh :tangle kk/2-hic/0-db.sh
-    ROOT=$(git rev-parse --show-toplevel)
 
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
+- Create Database
+  #+header: :var names=genomes[,0]
+  #+header: :var genomes=genomes
+  #+begin_src sh :tangle 2-hic/0-db/run.sh
+PATH=$DIR/apps/bwa-0.7.17/:$PATH
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
-    fasta=$ROOT/wgs/1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
-    bwa index -a bwtsw -p $DIR/kk/2-hic/Kk.db $fasta
-    samtools faidx $fasta
+spec="${names[${SLURM_ARRAY_TASK_ID}]}"
+
+zcat $DIR/../${genomes[$spec]} > $SCRATCH/$spec.all.fa
+samtools faidx $SCRATCH/$spec.all.fa \
+    ${spec}_{01,2_4,03} ${spec}_{05..13} \
+    > $SCRATCH/$spec.chr.fa
+
+bwa index -a bwtsw -p $DIR/2-hic/0-db/$spec $SCRATCH/$spec.chr.fa
   #+end_src
 
-- Align Hi-C data to assembly
-  #+begin_src sh :tangle kk/2-hic/1-bwa.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    RAW=$(realpath $ROOT/wgs/0-raw/)
+- Align Hi-C data
+  #+header: :var names=genomes[,0]
+  #+header: :var data=hic
+  #+begin_src sh :tangle 2-hic/1-bwa/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+RAW=$(realpath $ROOT/wgs/0-raw/)
 
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/bin:$PATH
-    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+PATH=$DIR/apps/bwa-0.7.17/:$PATH
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
-    bwa mem -5SP -t 48 $DIR/kk/2-hic/Kk.db \
-        $RAW/Kk/hi-c/Kk_HiC_CKDL220020123-1A_HCWYNDSX5_L1_{1,2}.fq.gz |
-        samblaster |
-        samtools view -bS -F 2316 > $DIR/kk/2-hic/Kk.bam
-  #+end_src
+spec="${names[${SLURM_ARRAY_TASK_ID}]}"
 
-- Get off chr contact from hic
-  #+begin_src sh  :tangle kk/2-hic/2-offtarget.sh
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-    samtools view -h  $DIR/kk/2-hic/Kk.bam |
-        awk '$7 != "="' |
-        samtools view -Sb - |
-        samtools sort -m 60G -o $DIR/kk/2-hic/Kk-interchr.bam -
+readarray -t files <<<"${data[$spec]}"
 
-    samtools index $DIR/kk/2-hic/Kk-interchr.bam
-  #+end_src
-
-** Kd
-- Create database
-  #+begin_src sh :tangle kd/2-hic/0-db.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    ASM_DIR=$ROOT/wgs/1-assembly
-    
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-
-    fasta=$ASM_DIR/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz
-    bwa index -a bwtsw -p $DIR/kd/2-hic/Kd.db $fasta
-    samtools faidx $fasta
-  #+end_src
-
-- Align Hi-C data to assembly
-  #+begin_src sh :tangle kd/2-hic/1-bwa.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    RAW=$(realpath $ROOT/wgs/0-raw/)
-
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/bin:$PATH
-    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
-
-    bwa mem -5SP -t 48 $DIR/kd/2-hic/Kd.db \
-        $RAW/kd/hi-c/kokia_S3HiC_R{1,2}.fastq.gz |
-        samblaster |
-        samtools view -bS -F 2316 > $DIR/kd/2-hic/Kd.bam
+bwa mem -5SP -t 48 $DIR/2-hic/0-db/$spec \
+    $RAW/${files[0]} $RAW/${files[1]} |
+    samblaster |
+    samtools view -bS -F 2316 |
+    samtools sort -m 60G -o $DIR/2-hic/1-bwa/$spec.bam
   #+end_src
 
 - Get off chr contact from hic
-  #+begin_src sh  :tangle kd/2-hic/2-offtarget.sh
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-    samtools view -h  $DIR/kd/2-hic/Kd.bam |
+  #+header: :var names=genomes[,0]
+  #+begin_src sh  :tangle 2-hic/2-offtarget/run.sh
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+for name in "${names[@]}"; do
+    samtools view -h $DIR/2-hic/1-bwa/$name.bam |
         awk '$7 != "="' |
-        samtools view -Sb - |
-        samtools sort -m 60G -o $DIR/kd/2-hic/Kd-interchr.bam -
+        samtools view -Sb - > $DIR/2-hic/2-offtarget/$name.bam
 
-    samtools index $DIR/kd/2-hic/Kd-interchr.bam
+    samtools index $DIR/2-hic/2-offtarget/$name.bam
+done
   #+end_src
 
-** Kc
-- Create database
-  #+begin_src sh :tangle kc/2-hic/0-db.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    ASM_DIR=$ROOT/wgs/1-assembly
-
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-
-    fasta=$ASM_DIR/Kokia_cookei_C69/Kokia_cookei.fasta.gz
-    bwa index -a bwtsw -p $DIR/kc/2-hic/Kc.db $fasta
-  #+end_src
-
-- Align Hi-C data to assembly
-  #+begin_src sh :tangle kc/2-hic/1-bwa.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    RAW=$(realpath $ROOT/wgs/0-raw/)
-
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/bin:$PATH
-    PATH=$PATH:$DIR/apps/samblaster-v.0.1.26/
-
-    bwa mem -5SP -t 48 $DIR/kc/2-hic/Kc.db \
-        $RAW/Kc/hi-c/Kc_HiC_CKDL220020122-1A_HCWYNDSX5_L1_{1,2}.fq.gz |
-        samblaster |
-        samtools view -bS -F 2316 > $DIR/kc/2-hic/Kc.bam
-  #+end_src
-
-- Get off chr contact from hic
-  #+begin_src sh  :tangle kc/2-hic/2-offtarget.sh
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-    samtools view -h  $DIR/kc/2-hic/Kc.bam |
-        awk '$7 != "="' |
-        samtools view -Sb - |
-        samtools sort -m 60G -o $DIR/kc/2-hic/Kc-interchr.bam -
-
-    samtools index $DIR/kc/2-hic/Kc-interchr.bam
-  #+end_src
 * TRF
+  #+header: :var names=genomes[,0]
+  #+header: :var genomes=genomes
+  #+begin_src sh :tangle 3-trf/run.sh
+PATH=$DIR/apps/:$PATH
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
-** Kk
-#+begin_src sh :tangle kk/3-trf-run.sh
-  ml parallel
+spec="${names[${SLURM_ARRAY_TASK_ID}]}"
 
-  ROOT=$(git rev-parse --show-toplevel)
-  ASM_DIR=$ROOT/wgs/1-assembly
-    
-  PATH=$DIR/apps/samtools-1.17/:$PATH
-  PATH=$DIR/apps/:$PATH
+zcat $DIR/../${genomes[$spec]} > $SCRATCH/$spec.all.fa
 
-  fasta=$ASM_DIR/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
+parallel --eta --tag \
+    samtools faidx $SCRATCH/$spec.all.fa {} '|' \
+    trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
+    > $DIR/3-trf/$spec.dat \
+    ::: ${spec}_{01,2_4,03} ${spec}_{05..13}
+  #+end_src
 
-  zcat $fasta > $DIR/kk/Kk.fa
-  samtools faidx $DIR/kk/Kk.fa
-  
-  cut -f 1 $DIR/kk/Kk.fa.fai |
-  parallel --eta --tag  \
-           samtools faidx $DIR/kk/Kk.fa {} '|' \
-           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
-           > $DIR/kk/3-trf.dat 
-
-#+end_src
-
-** Kd
-#+begin_src sh :tangle kd/3-trf-run.sh
-  ml parallel
-
-  ROOT=$(git rev-parse --show-toplevel)
-  ASM_DIR=$ROOT/wgs/1-assembly
-    
-  PATH=$DIR/apps/samtools-1.17/:$PATH
-  PATH=$DIR/apps/:$PATH
-
-  fasta=$ASM_DIR/Kokia_drynarioides_JFW-HI/Kokia_drynarioides.fasta.gz
-
-  zcat $fasta > $DIR/kd/Kd.fa
-  samtools faidx $DIR/kd/Kd.fa
-  
-  cut -f 1 $DIR/kd/Kd.fa.fai |
-  parallel --eta --tag  \
-           samtools faidx $DIR/kd/Kd.fa {} '|' \
-           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
-           > $DIR/kd/3-trf.dat 
-#+end_src
-
-** Kc
-#+begin_src sh :tangle kc/3-trf-run.sh
-  ml parallel
-
-  ROOT=$(git rev-parse --show-toplevel)
-  ASM_DIR=$ROOT/wgs/1-assembly
-    
-  PATH=$DIR/apps/samtools-1.17/:$PATH
-  PATH=$DIR/apps/:$PATH
-
-  fasta=$ASM_DIR/Kokia_cookei_C69/Kokia_cookei.fasta.gz
-
-  zcat $fasta > $DIR/kc/Kc.fa
-  samtools faidx $DIR/kc/Kc.fa
-
-  cut -f 1 $DIR/kc/Kc.fa.fai |
-  parallel --eta --tag  \
-           samtools faidx $DIR/kc/Kc.fa {} '|' \
-           trf-v4.09.1 - 2 7 7 80 10 100000 500 -h -ngs \
-           > $DIR/kc/3-trf.dat 
-#+end_src
 
 * Figure
 
-- Create 5k windows with a 2.5k slide
-   #+begin_src sh :tangle 0-makewindows.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    PATH=$DIR/apps/:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
-    fasta=$ROOT/wgs/1-assembly/Kokia_kauaiensis_S9/Kokia_kauaiensis.fasta.gz
+#+header: :var names=genomes[,0]
+#+header: :var genomes=genomes
+  #+begin_src sh :tangle 4-figure/1-get-cov.sh
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/bedtools2/bin/:$PATH
+PATH=$DIR/apps/samtools-1.17-centos/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
-    zcat $fasta > $DIR/Kk.fa
-    samtools faidx $DIR/Kk.fa
+for spec in "${!genomes[@]}"; do
+    zcat $ROOT/wgs/${genomes[$spec]} > $SCRATCH/$spec.all.fa
 
-    bedtools-v2.31.0 makewindows -g $DIR/Kk.fa.fai -w 5000 -s 2500 \
-                     > $DIR/Kk.5k-window-2.5k-slide.bed
-  #+end_src
-- Bedcov for methylation calls
-  #+begin_src sh :tangle 1-meth-bedcov.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    PATH=$DIR/apps/:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
+    samtools faidx $SCRATCH/$spec.all.fa
+    echo ${spec}_{01,2_4,03} ${spec}_{05..13} |
+        tr ' ' '\n' |
+        grep -w -f - $SCRATCH/$spec.all.fa.fai |
+        grep -v Unplaced > $SCRATCH/$spec.genome
 
-    bedtools-v2.31.0 coverage -a $DIR/Kk.5k-window-2.5k-slide.bed \
-                     -b $DIR/1-meth/4-full.modbam.cpg.acc.bed \
-                     > $DIR/1-meth.bedcov
-  #+end_src
-- Bedcov for hic inter-chr interactions
-  #+begin_src sh
-    PATH=$DIR/apps/samtools-1.17/:$PATH
+    bedtools makewindows -g $SCRATCH/$spec.genome \
+        -w 5000 -s 2500 > $DIR/4-figure/$spec.5k-window-2.5k-slide.bed
 
-    samtools bedcov $DIR/Kk.5k-window-2.5k-slide.bed \
-              $DIR/2-hic/Kk-interchr.bam > $DIR/2-hic.bedcov
-  #+end_src
-- Tandem repeat locations
-  #+begin_src sh :tangle 3-trf-locations.sh
-    DIR=.
-    ROOT=$(git rev-parse --show-toplevel)
-    PATH=$DIR/apps/:$PATH
+    bedtools coverage \
+        -a $DIR/4-figure/$spec.5k-window-2.5k-slide.bed \
+        -b $DIR/1-meth/3-modkit/$spec.bed \
+        > $DIR/4-figure/$spec.meth.bedcov
 
-    awk '!/@/ { print $1,$2,$3 }' OFS="\t"  $DIR/3-trf.dat |
+    samtools bedcov $DIR/4-figure/$spec.5k-window-2.5k-slide.bed \
+        $DIR/2-hic/2-offtarget/$spec.bam \
+        > $DIR/4-figure/$spec.hic.bedcov
+
+    awk '!/@/ { print $1,$2,$3 }' OFS="\t" $DIR/3-trf/$spec.dat |
         sort -k1,1 -k2,3n |
-        bedtools-v2.31.0 merge -d 250000 -i - > $DIR/3-trf.loc.bed
-
-  #+end_src  
-
+        bedtools merge -d 250000 -i - \
+            > $DIR/4-figure/$spec.trf.bed
+done
+  #+end_src
 
 #+begin_src R
     library(tidyverse)
