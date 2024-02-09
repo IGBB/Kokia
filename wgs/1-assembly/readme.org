@@ -1,13 +1,7 @@
 #+TITLE: Assembly
 #+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
-#+name: transpose
-#+header: table=""
-#+begin_src elisp
-(org-table-transpose-table-at-point table)
-#+end_src
-
-* Assembly
+* Contig Assembly
 ** /Kokia drynarioides/ JFW-HI
 - Remove lambda and remove reads shorter than 4kb from nanopore data
   #+header: :var runs=../0-raw/readme.org:kd-nanopore-runs[,1]
