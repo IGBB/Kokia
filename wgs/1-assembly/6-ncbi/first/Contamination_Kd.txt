@@ -1,0 +1,157 @@
+SUBID     	BioProject	BioSample	Organism
+--------------------------------------------------------
+SUB14235440	PRJNA1087748	SAMN40455389	Kokia drynarioides
+
+[] We ran your sequences through our Contamination Screen. The screen found 
+contigs that need to be trimmed and/or excluded. The results are in the 
+Contamination.txt file posted in your submission on the WGS submission portal 
+https://submit.ncbi.nlm.nih.gov/subs/genome/. More details about the 
+contamination screening process are available at https://github.com/ncbi/fcs
+
+GenBank staff will automatically remove contaminants that are found to be 
+the entire sequence or at the end of a sequence, and will post the reports 
+and edited fasta file to the submission portal. Note that internal contamination 
+will not be automatically removed since the sequence may be misassembled and 
+therefore should be split at the contamination and resubmitted as separate sequences.
+In addition, we do not automatically remove mitochondrial sequences in 
+eukaryotic submissions. 
+
+If you selected the submission portal option "Do not automatically trim or 
+remove sequences identified as contamination" then you will need 
+to adjust the sequences appropriately and then resubmit your sequences. 
+After you remove the contamination, trim any Ns at the ends of the sequence 
+and remove any sequences that are shorter than 200 nt and not part of a 
+multi-component scaffold.
+
+WARNING: If we do not hear from you by $(add.days,14), your 
+submission will be deleted from the processing queue.
+
+Note that mismatches between the name of the adaptor/primer identified in the screen 
+and the sequencing technology used to generate the sequencing data should not be used 
+to discount the validity of the screen results as the adaptors/primers of many 
+different sequencing platforms share sequence similarity.
+
+
+
+Contamination Results:
+
+
+Mitochondrion:
+[] Some sequences are similar to a mitochondrial sequence. There are three options:
+ (A) If you are not sequencing mitochondrial DNA, remove these sequences
+ (B) If you want to include the mitochondrial sequences in the genome submission, 
+ label them as mitochondrial. 
+- To label the sequences in a BATCH submission, add a source qualifier in the fasta  
+ definition line [location=mitochondrion].  See "IMPORTANT: Additional requirements 
+ for batch submissions" at https://www.ncbi.nlm.nih.gov/genbank/genomesubmit/#batch_assignment
+- If this is not a BATCH submission, indicate that these sequences are mitochondrial in the 
+ Assignment tab of the submission portal.
+- In addition, it is recommended but not required that you move these sequences to the end 
+of your submission or put them in a separate file so that  they are clustered together.
+(C) If these are nuclear mitochondrial pseudogene regions (numt's) that should remain 
+ in the submission, please notify us by including a comment in the submission portal 
+or by emailing us. Note that numts should be integrated into the genome and therefore 
+should only be marked as "Trim".  Any sequence marked as "Exclude" because of a hit 
+to mitochondria must either be removed (option A) or labeled as mitochondrial (option B).
+The numt sequences will still appear in the contamination report, but once you have 
+removed all those marked to exclude and told us that the rest are numts, you can ignore 
+the errors. We will manually override the error when we review your submission.
+
+
+Adaptor:
+[] Some of the sequences hit primers or adaptors used in Illumina, 
+454, or other sequencing strategies or platforms.  Adaptor at the 
+end of a sequence should be removed. However, if adaptors are 
+present within sequences then you should strongly consider 
+splitting the sequences at the adaptor because the adaptor sequence 
+could have been the region of overlap, causing a misassembly.
+
+
+Screened 2,476 sequences, 552,807,410 bp.
+54 sequences to exclude, 21 sequences to trim
+
+Exclude:
+Sequence name, length, apparent source
+Kd_unplaced_1010	16921	prok:b-proteobacteria
+Kd_unplaced_1171	15340	prok:b-proteobacteria
+Kd_unplaced_1348	13869	prok:b-proteobacteria
+Kd_unplaced_1494	11987	prok:mycoplasmas
+Kd_unplaced_1553	10467	prok:b-proteobacteria
+Kd_unplaced_1564	8701	prok:mycoplasmas
+Kd_unplaced_1571	7196	virs:prokaryotic viruses
+Kd_unplaced_1572	7191	virs:prokaryotic viruses
+Kd_unplaced_1573	7136	virs:prokaryotic viruses
+Kd_unplaced_1574	7099	prok:mycoplasmas
+Kd_unplaced_1575	7002	prok:mycoplasmas
+Kd_unplaced_1577	6782	prok:mycoplasmas
+Kd_unplaced_1578	6642	prok:mycoplasmas
+Kd_unplaced_1579	6524	prok:mycoplasmas
+Kd_unplaced_1580	6251	prok:mycoplasmas
+Kd_unplaced_1587	5925	prok:mycoplasmas
+Kd_unplaced_1588	5752	prok:mycoplasmas
+Kd_unplaced_1596	4916	prok:mycoplasmas
+Kd_unplaced_1597	4609	prok:mycoplasmas
+Kd_unplaced_1598	4424	prok:mycoplasmas
+Kd_unplaced_1599	4387	prok:mycoplasmas
+Kd_unplaced_1608	3630	prok:mycoplasmas
+Kd_unplaced_1609	3610	virs:prokaryotic viruses
+Kd_unplaced_1610	3604	virs:prokaryotic viruses
+Kd_unplaced_1611	3604	virs:prokaryotic viruses
+Kd_unplaced_1612	3603	virs:prokaryotic viruses
+Kd_unplaced_1613	3602	virs:prokaryotic viruses
+Kd_unplaced_1614	3597	virs:prokaryotic viruses
+Kd_unplaced_1615	3596	virs:prokaryotic viruses
+Kd_unplaced_1616	3595	virs:prokaryotic viruses
+Kd_unplaced_1617	3594	virs:prokaryotic viruses
+Kd_unplaced_1618	3593	virs:prokaryotic viruses
+Kd_unplaced_1619	3592	virs:prokaryotic viruses
+Kd_unplaced_1620	3587	virs:prokaryotic viruses
+Kd_unplaced_1621	3586	virs:prokaryotic viruses
+Kd_unplaced_1622	3582	virs:prokaryotic viruses
+Kd_unplaced_1623	3580	virs:prokaryotic viruses
+Kd_unplaced_1625	3553	prok:mycoplasmas
+Kd_unplaced_1626	3332	prok:mycoplasmas
+Kd_unplaced_1627	3270	prok:mycoplasmas
+Kd_unplaced_1628	3042	prok:mycoplasmas
+Kd_unplaced_1637	2717	prok:mycoplasmas
+Kd_unplaced_1638	2696	prok:mycoplasmas
+Kd_unplaced_1639	2689	virs:prokaryotic viruses
+Kd_unplaced_164	91171	prok:b-proteobacteria
+Kd_unplaced_1640	2523	prok:mycoplasmas
+Kd_unplaced_1641	2479	prok:mycoplasmas
+Kd_unplaced_1656	1886	virs:prokaryotic viruses
+Kd_unplaced_1657	1883	prok:mycoplasmas
+Kd_unplaced_179	83347	mitochondrion
+Kd_unplaced_513	28660	prok:b-proteobacteria
+Kd_unplaced_618	24252	mitochondrion
+Kd_unplaced_840	18738	mitochondrion
+Kd_unplaced_863	18530	mitochondrion
+
+
+Trim:
+Sequence name, length, span(s), apparent source
+Kd_09	38097263	37761189..37761213	adaptor:NGB02000.1
+Kd_09	38097263	38045686..38045706	adaptor:NGB02000.1
+Kd_09	38097263	38072408..38072433	adaptor:NGB02000.1
+Kd_2_4	37785486	26835476..26835494	adaptor:NGB02000.1
+Kd_unplaced_1024	16854	16831..16854	adaptor:NGB02000.1
+Kd_unplaced_1088	16090	16064..16090	adaptor:NGB02000.1
+Kd_unplaced_1201	15068	15043..15068	adaptor:NGB02000.1
+Kd_unplaced_1345	13892	13874..13892	adaptor:NGB02000.1
+Kd_unplaced_1399	13315	1..24	adaptor:NGB02000.1
+Kd_unplaced_1407	13236	1..24	adaptor:NGB02000.1
+Kd_unplaced_201	44667	1..25	adaptor:NGB02000.1
+Kd_unplaced_288	47042	1..19	adaptor:NGB02000.1
+Kd_unplaced_301	45812	45787..45812	adaptor:NGB02000.1
+Kd_unplaced_342	39100	39074..39100	adaptor:NGB02000.1
+Kd_unplaced_435	32188	1..26	adaptor:NGB02000.1
+Kd_unplaced_606	24580	24553..24580	adaptor:NGB02000.1
+Kd_unplaced_685	21977	1..25	adaptor:NGB02000.1
+Kd_unplaced_718	20933	20907..20933	adaptor:NGB02000.1
+Kd_unplaced_739	20496	1..27	adaptor:NGB02000.1
+Kd_unplaced_742	20406	1..27	adaptor:NGB02000.1
+Kd_unplaced_797	19428	1..26	adaptor:NGB02000.1
+Kd_unplaced_962	17396	1..25	adaptor:NGB02000.1
+Kd_unplaced_98	55949	55924..55949	adaptor:NGB02000.1
+
+

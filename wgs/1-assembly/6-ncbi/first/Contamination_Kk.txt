@@ -1,0 +1,652 @@
+SUBID     	BioProject	BioSample	Organism
+--------------------------------------------------------
+SUB14235440	PRJNA1087748	SAMN40455390	Kokia kauaiensis
+
+[] We ran your sequences through our Contamination Screen. The screen found 
+contigs that need to be trimmed and/or excluded. The results are in the 
+Contamination.txt file posted in your submission on the WGS submission portal 
+https://submit.ncbi.nlm.nih.gov/subs/genome/. More details about the 
+contamination screening process are available at https://github.com/ncbi/fcs
+
+GenBank staff will automatically remove contaminants that are found to be 
+the entire sequence or at the end of a sequence, and will post the reports 
+and edited fasta file to the submission portal. Note that internal contamination 
+will not be automatically removed since the sequence may be misassembled and 
+therefore should be split at the contamination and resubmitted as separate sequences.
+In addition, we do not automatically remove mitochondrial sequences in 
+eukaryotic submissions. 
+
+If you selected the submission portal option "Do not automatically trim or 
+remove sequences identified as contamination" then you will need 
+to adjust the sequences appropriately and then resubmit your sequences. 
+After you remove the contamination, trim any Ns at the ends of the sequence 
+and remove any sequences that are shorter than 200 nt and not part of a 
+multi-component scaffold.
+
+WARNING: If we do not hear from you by $(add.days,14), your 
+submission will be deleted from the processing queue.
+
+Note that mismatches between the name of the adaptor/primer identified in the screen 
+and the sequencing technology used to generate the sequencing data should not be used 
+to discount the validity of the screen results as the adaptors/primers of many 
+different sequencing platforms share sequence similarity.
+
+
+
+Contamination Results:
+
+
+Mitochondrion:
+[] Some sequences are similar to a mitochondrial sequence. There are three options:
+ (A) If you are not sequencing mitochondrial DNA, remove these sequences
+ (B) If you want to include the mitochondrial sequences in the genome submission, 
+ label them as mitochondrial. 
+- To label the sequences in a BATCH submission, add a source qualifier in the fasta  
+ definition line [location=mitochondrion].  See "IMPORTANT: Additional requirements 
+ for batch submissions" at https://www.ncbi.nlm.nih.gov/genbank/genomesubmit/#batch_assignment
+- If this is not a BATCH submission, indicate that these sequences are mitochondrial in the 
+ Assignment tab of the submission portal.
+- In addition, it is recommended but not required that you move these sequences to the end 
+of your submission or put them in a separate file so that  they are clustered together.
+(C) If these are nuclear mitochondrial pseudogene regions (numt's) that should remain 
+ in the submission, please notify us by including a comment in the submission portal 
+or by emailing us. Note that numts should be integrated into the genome and therefore 
+should only be marked as "Trim".  Any sequence marked as "Exclude" because of a hit 
+to mitochondria must either be removed (option A) or labeled as mitochondrial (option B).
+The numt sequences will still appear in the contamination report, but once you have 
+removed all those marked to exclude and told us that the rest are numts, you can ignore 
+the errors. We will manually override the error when we review your submission.
+
+
+Adaptor:
+[] Some of the sequences hit primers or adaptors used in Illumina, 
+454, or other sequencing strategies or platforms.  Adaptor at the 
+end of a sequence should be removed. However, if adaptors are 
+present within sequences then you should strongly consider 
+splitting the sequences at the adaptor because the adaptor sequence 
+could have been the region of overlap, causing a misassembly.
+
+
+Screened 2,094 sequences, 556,720,960 bp.
+121 sequences to exclude, 260 sequences to trim
+
+Exclude:
+Sequence name, length, apparent source
+scaffold_1055	8457	virs:prokaryotic viruses
+scaffold_1090	8087	virs:prokaryotic viruses
+scaffold_1133	7224	virs:prokaryotic viruses
+scaffold_1134	7222	virs:prokaryotic viruses
+scaffold_1135	7217	virs:prokaryotic viruses
+scaffold_1136	7205	virs:prokaryotic viruses
+scaffold_1137	7205	virs:prokaryotic viruses
+scaffold_1142	7162	virs:prokaryotic viruses
+scaffold_1148	7101	virs:prokaryotic viruses
+scaffold_1164	6745	virs:prokaryotic viruses
+scaffold_1172	6600	virs:prokaryotic viruses
+scaffold_1184	6284	virs:prokaryotic viruses
+scaffold_1187	6165	virs:prokaryotic viruses
+scaffold_1189	6086	virs:prokaryotic viruses
+scaffold_1190	6052	virs:prokaryotic viruses
+scaffold_1206	5648	prok:b-proteobacteria
+scaffold_1208	5618	virs:prokaryotic viruses
+scaffold_1211	5591	mitochondrion
+scaffold_1214	5531	virs:prokaryotic viruses
+scaffold_1234	5019	virs:prokaryotic viruses
+scaffold_1237	4994	mitochondrion
+scaffold_1241	4807	virs:prokaryotic viruses
+scaffold_1250	4567	virs:prokaryotic viruses
+scaffold_1251	4533	virs:prokaryotic viruses
+scaffold_1253	4486	virs:prokaryotic viruses
+scaffold_1254	4479	virs:prokaryotic viruses
+scaffold_1258	4360	virs:prokaryotic viruses
+scaffold_1260	4272	virs:prokaryotic viruses
+scaffold_1261	4252	virs:prokaryotic viruses
+scaffold_1265	4159	virs:prokaryotic viruses
+scaffold_1272	3917	virs:prokaryotic viruses
+scaffold_1273	3857	virs:prokaryotic viruses
+scaffold_1276	3717	virs:prokaryotic viruses
+scaffold_1277	3695	virs:prokaryotic viruses
+scaffold_1279	3649	virs:prokaryotic viruses
+scaffold_1281	3648	virs:prokaryotic viruses
+scaffold_1282	3646	virs:prokaryotic viruses
+scaffold_1283	3644	virs:prokaryotic viruses
+scaffold_1284	3642	virs:prokaryotic viruses
+scaffold_1285	3642	virs:prokaryotic viruses
+scaffold_1286	3642	prok:b-proteobacteria
+scaffold_1287	3642	virs:prokaryotic viruses
+scaffold_1288	3641	virs:prokaryotic viruses
+scaffold_1289	3641	virs:prokaryotic viruses
+scaffold_1290	3641	virs:prokaryotic viruses
+scaffold_1291	3640	virs:prokaryotic viruses
+scaffold_1292	3639	virs:prokaryotic viruses
+scaffold_1293	3639	virs:prokaryotic viruses
+scaffold_1294	3638	virs:prokaryotic viruses
+scaffold_1295	3637	virs:prokaryotic viruses
+scaffold_1296	3637	virs:prokaryotic viruses
+scaffold_1297	3637	virs:prokaryotic viruses
+scaffold_1298	3637	virs:prokaryotic viruses
+scaffold_1299	3636	virs:prokaryotic viruses
+scaffold_1300	3636	virs:prokaryotic viruses
+scaffold_1301	3635	virs:prokaryotic viruses
+scaffold_1302	3635	virs:prokaryotic viruses
+scaffold_1303	3635	virs:prokaryotic viruses
+scaffold_1304	3633	virs:prokaryotic viruses
+scaffold_1305	3632	virs:prokaryotic viruses
+scaffold_1306	3632	virs:prokaryotic viruses
+scaffold_1307	3631	virs:prokaryotic viruses
+scaffold_1308	3631	virs:prokaryotic viruses
+scaffold_1309	3631	virs:prokaryotic viruses
+scaffold_1310	3630	virs:prokaryotic viruses
+scaffold_1311	3630	virs:prokaryotic viruses
+scaffold_1312	3629	virs:prokaryotic viruses
+scaffold_1313	3629	virs:prokaryotic viruses
+scaffold_1314	3629	virs:prokaryotic viruses
+scaffold_1315	3628	virs:prokaryotic viruses
+scaffold_1316	3628	virs:prokaryotic viruses
+scaffold_1317	3628	virs:prokaryotic viruses
+scaffold_1318	3628	virs:prokaryotic viruses
+scaffold_1319	3627	virs:prokaryotic viruses
+scaffold_1320	3626	virs:prokaryotic viruses
+scaffold_1321	3626	virs:prokaryotic viruses
+scaffold_1322	3625	virs:prokaryotic viruses
+scaffold_1323	3625	virs:prokaryotic viruses
+scaffold_1324	3625	virs:prokaryotic viruses
+scaffold_1325	3625	virs:prokaryotic viruses
+scaffold_1326	3623	virs:prokaryotic viruses
+scaffold_1327	3622	virs:prokaryotic viruses
+scaffold_1328	3622	virs:prokaryotic viruses
+scaffold_1329	3621	virs:prokaryotic viruses
+scaffold_133	37308	mitochondrion
+scaffold_1330	3620	virs:prokaryotic viruses
+scaffold_1331	3620	virs:prokaryotic viruses
+scaffold_1332	3619	virs:prokaryotic viruses
+scaffold_1333	3617	virs:prokaryotic viruses
+scaffold_1334	3616	virs:prokaryotic viruses
+scaffold_1335	3615	virs:prokaryotic viruses
+scaffold_1336	3615	virs:prokaryotic viruses
+scaffold_1337	3613	virs:prokaryotic viruses
+scaffold_1338	3613	virs:prokaryotic viruses
+scaffold_1339	3613	virs:prokaryotic viruses
+scaffold_1340	3613	virs:prokaryotic viruses
+scaffold_1341	3613	virs:prokaryotic viruses
+scaffold_1342	3612	virs:prokaryotic viruses
+scaffold_1343	3611	virs:prokaryotic viruses
+scaffold_1344	3611	virs:prokaryotic viruses
+scaffold_1345	3611	virs:prokaryotic viruses
+scaffold_1346	3610	virs:prokaryotic viruses
+scaffold_1347	3610	virs:prokaryotic viruses
+scaffold_1348	3608	virs:prokaryotic viruses
+scaffold_1349	3608	virs:prokaryotic viruses
+scaffold_1350	3608	virs:prokaryotic viruses
+scaffold_1352	3608	virs:prokaryotic viruses
+scaffold_1353	3606	virs:prokaryotic viruses
+scaffold_1354	3605	virs:prokaryotic viruses
+scaffold_1355	3605	virs:prokaryotic viruses
+scaffold_1356	3603	virs:prokaryotic viruses
+scaffold_347	17984	mitochondrion
+scaffold_399	16434	prok:a-proteobacteria
+scaffold_480	14977	mitochondrion
+scaffold_562	13580	mitochondrion
+scaffold_689	11934	mitochondrion
+scaffold_790	10808	virs:prokaryotic viruses
+scaffold_815	10629	mitochondrion
+scaffold_816	10619	prok:a-proteobacteria
+scaffold_863	10249	mitochondrion
+scaffold_953	9522	mitochondrion
+
+
+Trim:
+Sequence name, length, span(s), apparent source
+Kk_01	38016703	1..29	adaptor:NGB02002.1
+Kk_01	38016703	835321..835352	adaptor:NGB02000.1
+Kk_01	38016703	5020299..5020325	adaptor:NGB02000.1
+Kk_01	38016703	5672439..5672470	adaptor:NGB02000.1
+Kk_01	38016703	7546793..7546830	adaptor:NGB02000.1
+Kk_01	38016703	15015857..15015892	adaptor:NGB02000.1
+Kk_01	38016703	15015993..15016028	adaptor:NGB02000.1
+Kk_01	38016703	28497015..28497051	adaptor:NGB02000.1
+Kk_03	40559865	5817647..5817680	adaptor:NGB02000.1
+Kk_03	40559865	5817781..5817812	adaptor:NGB02000.1
+Kk_03	40559865	7785143..7785173	adaptor:NGB02000.1
+Kk_03	40559865	7788123..7788157	adaptor:NGB02000.1
+Kk_03	40559865	17113947..17113981	adaptor:NGB02000.1
+Kk_03	40559865	19412787..19412822	adaptor:NGB02000.1
+Kk_03	40559865	21572837..21572869	adaptor:NGB02000.1
+Kk_03	40559865	27762121..27763312	prok:a-proteobacteria
+Kk_05	52254581	15565209..15565243	adaptor:NGB02000.1
+Kk_05	52254581	22794351..22794385	adaptor:NGB02000.1
+Kk_05	52254581	25855134..25855160	adaptor:NGB02001.1
+Kk_05	52254581	28707135..28707168	adaptor:NGB02000.1
+Kk_05	52254581	31382478..31382502	adaptor:NGB02000.1
+Kk_05	52254581	31402253..31402278	adaptor:NGB02000.1
+Kk_05	52254581	31404059..31404089	adaptor:NGB02000.1
+Kk_05	52254581	36951949..36951983	adaptor:NGB02000.1
+Kk_05	52254581	37143283..37143321	adaptor:NGB02000.1
+Kk_05	52254581	37401645..37401678	adaptor:NGB02000.1
+Kk_05	52254581	38683701..38683737	adaptor:NGB02000.1
+Kk_05	52254581	40330857..40330901	adaptor:NGB02000.1
+Kk_05	52254581	43445771..43445804	adaptor:NGB02000.1
+Kk_05	52254581	43851525..43851565	adaptor:NGB02000.1
+Kk_06	60934907	3183098..3183166	adaptor:NGB02000.1
+Kk_06	60934907	3355395..3355420	adaptor:NGB02000.1
+Kk_06	60934907	5834343..5834379	adaptor:NGB02000.1
+Kk_06	60934907	6014078..6014106	adaptor:NGB02000.1
+Kk_06	60934907	12622948..12622985	adaptor:NGB02000.1
+Kk_06	60934907	20432584..20432620	adaptor:NGB02000.1
+Kk_06	60934907	20594356..20594391	adaptor:NGB02000.1
+Kk_06	60934907	35962995..35963029	adaptor:NGB02000.1
+Kk_06	60934907	37121569..37121608	adaptor:NGB02000.1
+Kk_06	60934907	38743799..38743823	adaptor:NGB02000.1
+Kk_06	60934907	38837002..38837035	adaptor:NGB02000.1
+Kk_06	60934907	52407971..52408008	adaptor:NGB02000.1
+Kk_06	60934907	58544418..58544452	adaptor:NGB02000.1
+Kk_07	39277275	8082689..8082725	adaptor:NGB02000.1
+Kk_07	39277275	12833475..12833509	adaptor:NGB02001.1
+Kk_07	39277275	13257955..13257988	adaptor:NGB02000.1
+Kk_07	39277275	26434626..26434663	adaptor:NGB02000.1
+Kk_08	41098112	1871189..1871232	adaptor:NGB02000.1
+Kk_08	41098112	4745683..4745719	adaptor:NGB02000.1
+Kk_08	41098112	4982144..4982176	adaptor:NGB02000.1
+Kk_08	41098112	9839885..9839920	adaptor:NGB02000.1
+Kk_08	41098112	16987209..16987250	adaptor:NGB02000.1
+Kk_08	41098112	17014034..17014066	adaptor:NGB02000.1
+Kk_08	41098112	18551036..18551070	adaptor:NGB02000.1
+Kk_08	41098112	22899710..22899741	adaptor:NGB02000.1
+Kk_09	40427285	3334139..3334173	adaptor:NGB02000.1
+Kk_09	40427285	10374000..10374034	adaptor:NGB02000.1
+Kk_09	40427285	11977328..11977362	adaptor:NGB02000.1
+Kk_09	40427285	15187316..15187356	adaptor:NGB02000.1
+Kk_09	40427285	17391260..17391295	adaptor:NGB02000.1
+Kk_09	40427285	25065466..25065500	adaptor:NGB02000.1
+Kk_09	40427285	29307981..29308016	adaptor:NGB02000.1
+Kk_10	45834956	5556476..5556511	adaptor:NGB02000.1
+Kk_10	45834956	17395299..17395331	adaptor:NGB02000.1
+Kk_10	45834956	17395432..17395461	adaptor:NGB02001.1
+Kk_10	45834956	17581882..17581914	adaptor:NGB02000.1
+Kk_10	45834956	18686290..18686322	adaptor:NGB02000.1
+Kk_10	45834956	18876924..18876954	adaptor:NGB02000.1
+Kk_10	45834956	30825374..30825991	prok:firmicutes
+Kk_10	45834956	41554320..41554352	adaptor:NGB02000.1
+Kk_10	45834956	45535508..45535542	adaptor:NGB02000.1
+Kk_10	45834956	45834923..45834956	adaptor:NGB02000.1
+Kk_11	49744552	29306..29338	adaptor:NGB02000.1
+Kk_11	49744552	14962522..14962552	adaptor:NGB02000.1
+Kk_11	49744552	15198790..15198820	adaptor:NGB02001.1
+Kk_11	49744552	21441807..21441836	adaptor:NGB02001.1
+Kk_11	49744552	22467991..22468024	adaptor:NGB02000.1
+Kk_11	49744552	23483594..23483634	adaptor:NGB02000.1
+Kk_11	49744552	23939459..23939495	adaptor:NGB02000.1
+Kk_11	49744552	25430020..25430052	adaptor:NGB02000.1
+Kk_11	49744552	32665150..32665181	adaptor:NGB02000.1
+Kk_11	49744552	40091738..40091770	adaptor:NGB02000.1
+Kk_11	49744552	42235173..42235198	adaptor:NGB02000.1
+Kk_11	49744552	45892741..45892775	adaptor:NGB02000.1
+Kk_11	49744552	46555373..46555404	adaptor:NGB02000.1
+Kk_12	43356429	2988739..2988774	adaptor:NGB02000.1
+Kk_12	43356429	14512220..14512255	adaptor:NGB02000.1
+Kk_12	43356429	20311897..20311934	adaptor:NGB02000.1
+Kk_12	43356429	37265288..37265322	adaptor:NGB02000.1
+Kk_13	40399132	14512853..14512889	adaptor:NGB02000.1
+Kk_13	40399132	16963958..16965996	prok:g-proteobacteria
+Kk_13	40399132	18950183..18950218	adaptor:NGB02000.1
+Kk_13	40399132	24414968..24414999	adaptor:multiple
+Kk_13	40399132	26958760..26958799	adaptor:NGB02000.1
+Kk_13	40399132	38577022..38577064	adaptor:NGB02000.1
+Kk_2_4	38179150	532504..532538	adaptor:NGB02000.1
+Kk_2_4	38179150	16976377..16976420	adaptor:NGB02000.1
+Kk_2_4	38179150	29307224..29307260	adaptor:NGB02000.1
+Kk_2_4	38179150	29307361..29307395	adaptor:NGB02000.1
+Kk_2_4	38179150	32977186..32977219	adaptor:NGB02000.1
+Kk_2_4	38179150	32977320..32977354	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	131862..131901	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	132002..132035	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	208877..208911	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	298506..298530	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	433186..433235	adaptor:NGB02000.1
+Unplaced.Kk_01	438488	438450..438488	adaptor:NGB02000.1
+Unplaced.Kk_03	519045	283846..283872	adaptor:NGB02000.1
+Unplaced.Kk_03	519045	284755..288369	virs:prokaryotic viruses
+Unplaced.Kk_03	519045	311545..311583	adaptor:NGB02000.1
+Unplaced.Kk_05	495344	138794..138836	adaptor:NGB02000.1
+Unplaced.Kk_05	495344	204856..204891	adaptor:NGB02000.1
+Unplaced.Kk_05	495344	262787..266392	virs:prokaryotic viruses
+Unplaced.Kk_05	495344	402466..406676	virs:prokaryotic viruses
+Unplaced.Kk_06	1097431	2247..9572	virs:prokaryotic viruses
+Unplaced.Kk_06	1097431	101832..101856	adaptor:NGB02000.1
+Unplaced.Kk_06	1097431	432367..432407	adaptor:NGB02000.1
+Unplaced.Kk_06	1097431	439339..439372	adaptor:NGB02000.1
+Unplaced.Kk_06	1097431	984668..984711	adaptor:NGB02000.1
+Unplaced.Kk_06	1097431	992469..992528	adaptor:NGB02000.1
+Unplaced.Kk_06	1097431	1067693..1067723	adaptor:NGB02000.1
+Unplaced.Kk_07	150125	17622..17652	adaptor:NGB02000.1
+Unplaced.Kk_07	150125	75021..82279	virs:prokaryotic viruses
+Unplaced.Kk_08	387872	1..4384	virs:prokaryotic viruses
+Unplaced.Kk_08	387872	379672..379703	adaptor:NGB02000.1
+Unplaced.Kk_09	126443	97524..97560	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	7970..8010	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	17975..18013	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	69212..69248	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	188764..188800	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	197677..197712	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	376558..376592	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	424881..424911	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	447039..447076	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	511612..515475	virs:prokaryotic viruses
+Unplaced.Kk_10	825032	603637..603672	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	625119..625163	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	715097..715128	adaptor:NGB02000.1
+Unplaced.Kk_10	825032	772569..772606	adaptor:NGB02000.1
+Unplaced.Kk_11	393701	113587..113621	adaptor:NGB02000.1
+Unplaced.Kk_11	393701	113722..113756	adaptor:NGB02000.1
+Unplaced.Kk_11	393701	214163..214199	adaptor:NGB02000.1
+Unplaced.Kk_11	393701	268497..272250	virs:prokaryotic viruses
+Unplaced.Kk_12	297541	21707..41785	mitochondrion
+Unplaced.Kk_12	297541	183170..183206	adaptor:NGB02000.1
+Unplaced.Kk_12	297541	216517..222889	virs:prokaryotic viruses
+Unplaced.Kk_12	297541	224371..224412	adaptor:multiple
+Unplaced.Kk_12	297541	242724..242755	adaptor:NGB02000.1
+Unplaced.Kk_13	687392	254006..254042	adaptor:NGB02000.1
+Unplaced.Kk_13	687392	389754..408128	mitochondrion
+Unplaced.Kk_13	687392	627371..627416	adaptor:NGB02000.1
+Unplaced.Kk_2_4	343303	131888..131919	adaptor:NGB02000.1
+Unplaced.Kk_2_4	343303	132020..132054	adaptor:NGB02000.1
+Unplaced.Kk_2_4	343303	249418..249459	adaptor:NGB02000.1
+scaffold_1004	8976	1..32	adaptor:NGB02000.1
+scaffold_1004	8976	2254..2282	adaptor:NGB02000.1
+scaffold_1005	8971	1..43	adaptor:NGB02000.1
+scaffold_1006	8970	1..32	adaptor:NGB02000.1
+scaffold_1014	8900	8869..8900	adaptor:NGB02001.1
+scaffold_1021	8847	1..39	adaptor:NGB02000.1
+scaffold_1033	8688	1..34	adaptor:NGB02000.1
+scaffold_1035	8649	1..35	adaptor:NGB02000.1
+scaffold_1039	8607	1..34	adaptor:NGB02000.1
+scaffold_1039	8607	180..205	adaptor:NGB02000.1
+scaffold_1046	8511	1..35	adaptor:NGB02000.1
+scaffold_1065	8365	1..30	adaptor:NGB02000.1
+scaffold_1066	8361	1..35	adaptor:NGB02000.1
+scaffold_1072	8272	8235..8272	adaptor:NGB02000.1
+scaffold_1074	8255	8228..8255	adaptor:NGB02000.1
+scaffold_1087	8127	1..41	adaptor:NGB02000.1
+scaffold_1098	7975	1..29	adaptor:NGB02000.1
+scaffold_1108	7821	3042..3067	adaptor:NGB02000.1
+scaffold_1117	7546	1..30	adaptor:NGB02000.1
+scaffold_1117	7546	7508..7546	adaptor:NGB02000.1
+scaffold_112	43820	1..38	adaptor:NGB02000.1
+scaffold_1124	7380	7347..7380	adaptor:NGB02000.1
+scaffold_1126	7362	3820..7263	vector/etc
+scaffold_1127	7344	2166..2193	adaptor:NGB02000.1
+scaffold_1128	7341	1..34	adaptor:NGB02000.1
+scaffold_1132	7230	1..37	adaptor:NGB02000.1
+scaffold_114	41764	36271..36304	adaptor:NGB02000.1
+scaffold_115	41389	41352..41389	adaptor:NGB02000.1
+scaffold_1153	7046	1..34	adaptor:NGB02000.1
+scaffold_1157	6954	1..32	adaptor:NGB02000.1
+scaffold_1157	6954	2520..2544	adaptor:NGB02000.1
+scaffold_116	41010	1..37	adaptor:NGB02000.1
+scaffold_1169	6651	1..33	adaptor:NGB02000.1
+scaffold_1173	6533	2853..6533	virs:prokaryotic viruses
+scaffold_1175	6500	6472..6500	adaptor:NGB02000.1
+scaffold_118	40972	1..38	adaptor:NGB02000.1
+scaffold_1183	6303	2705..6303	virs:prokaryotic viruses
+scaffold_1191	6035	5999..6035	adaptor:NGB02000.1
+scaffold_1193	6017	1..35	adaptor:NGB02000.1
+scaffold_12	1219806	560649..560683	adaptor:NGB02000.1
+scaffold_1200	5767	1..34	adaptor:NGB02000.1
+scaffold_1200	5767	304..329	adaptor:NGB02000.1
+scaffold_121	40680	33170..33197	adaptor:NGB02000.1
+scaffold_1213	5533	1..41	adaptor:NGB02000.1
+scaffold_1213	5533	5491..5533	adaptor:NGB02000.1
+scaffold_122	38849	1..39	adaptor:NGB02000.1
+scaffold_122	38849	38815..38849	adaptor:NGB02000.1
+scaffold_1220	5409	598..625	adaptor:NGB02000.1
+scaffold_1223	5370	1160..1184	adaptor:NGB02000.1
+scaffold_1223	5370	5349..5370	adaptor:NGB02000.1
+scaffold_1227	5157	5119..5157	adaptor:NGB02000.1
+scaffold_1232	5080	1..33	adaptor:NGB02000.1
+scaffold_1245	4743	1..31	adaptor:NGB02000.1
+scaffold_1245	4743	4695..4743	adaptor:NGB02000.1
+scaffold_1246	4725	1..36	adaptor:NGB02000.1
+scaffold_1247	4708	1665..1693	adaptor:NGB02000.1
+scaffold_1247	4708	4671..4708	adaptor:NGB02000.1
+scaffold_1248	4670	2202..2227	adaptor:NGB02000.1
+scaffold_125	38143	38111..38143	adaptor:NGB02000.1
+scaffold_1252	4505	4470..4505	adaptor:NGB02000.1
+scaffold_1259	4319	4284..4319	adaptor:NGB02000.1
+scaffold_1264	4166	1..30	adaptor:NGB02000.1
+scaffold_1267	4023	1..34	adaptor:NGB02000.1
+scaffold_1267	4023	3994..4023	adaptor:NGB02000.1
+scaffold_1275	3769	3735..3769	adaptor:NGB02000.1
+scaffold_1278	3652	1..36	adaptor:NGB02000.1
+scaffold_1278	3652	3619..3652	adaptor:NGB02000.1
+scaffold_129	38000	1..29	adaptor:NGB02000.1
+scaffold_13	694027	70024..70048	adaptor:NGB02000.1
+scaffold_13	694027	247643..247668	adaptor:NGB02000.1
+scaffold_13	694027	253667..253703	adaptor:NGB02000.1
+scaffold_13	694027	267121..267146	adaptor:NGB02000.1
+scaffold_13	694027	413012..413042	adaptor:NGB02000.1
+scaffold_13	694027	546929..546956	adaptor:NGB02000.1
+scaffold_13	694027	622003..622028	adaptor:NGB02000.1
+scaffold_134	37042	37007..37042	adaptor:NGB02000.1
+scaffold_1357	3407	1..39	adaptor:NGB02000.1
+scaffold_137	36556	1..31	adaptor:NGB02000.1
+scaffold_1371	2595	2557..2595	adaptor:NGB02000.1
+scaffold_1379	2000	1..32	adaptor:NGB02001.1
+scaffold_1388	2000	1..41	adaptor:NGB02000.1
+scaffold_1391	2000	1..34	adaptor:NGB02000.1
+scaffold_1394	2000	1..25	adaptor:NGB02000.1
+scaffold_1399	1000	1..37	adaptor:NGB02000.1
+scaffold_1403	1000	1..40	adaptor:NGB02000.1
+scaffold_1404	1000	1..36	adaptor:NGB02000.1
+scaffold_1405	1000	1..35	adaptor:NGB02000.1
+scaffold_145	35273	1..32	adaptor:NGB02000.1
+scaffold_146	35257	1..39	adaptor:NGB02000.1
+scaffold_156	33376	1..38	adaptor:NGB02000.1
+scaffold_158	33340	1..35	adaptor:NGB02000.1
+scaffold_165	32724	4051..4084	adaptor:NGB02000.1
+scaffold_168	32459	32422..32459	adaptor:NGB02000.1
+scaffold_17	419309	56659..56695	adaptor:NGB02001.1
+scaffold_170	32211	1..35	adaptor:NGB02000.1
+scaffold_170	32211	32180..32211	adaptor:NGB02000.1
+scaffold_171	32175	32141..32175	adaptor:NGB02000.1
+scaffold_178	30949	30911..30949	adaptor:NGB02000.1
+scaffold_182	30247	1..31	adaptor:NGB02000.1
+scaffold_182	30247	30207..30247	adaptor:NGB02000.1
+scaffold_19	368384	1..32	adaptor:NGB02000.1
+scaffold_19	368384	19228..19253	adaptor:NGB02000.1
+scaffold_19	368384	108684..108719	adaptor:NGB02000.1
+scaffold_19	368384	157974..157998	adaptor:NGB02000.1
+scaffold_19	368384	214432..214457	adaptor:NGB02000.1
+scaffold_19	368384	304689..304724	adaptor:NGB02000.1
+scaffold_19	368384	325502..325537	adaptor:NGB02000.1
+scaffold_191	28952	14050..14075	adaptor:NGB02000.1
+scaffold_192	28652	8763..8790	adaptor:NGB02000.1
+scaffold_198	28064	28028..28064	adaptor:NGB02000.1
+scaffold_20	325198	48134..48165	adaptor:NGB02000.1
+scaffold_20	325198	325165..325198	adaptor:NGB02000.1
+scaffold_200	27921	1..39	adaptor:NGB02000.1
+scaffold_208	26875	1..37	adaptor:NGB02000.1
+scaffold_218	25937	25902..25937	adaptor:NGB02000.1
+scaffold_222	25549	9134..9162	adaptor:NGB02000.1
+scaffold_222	25549	25515..25549	adaptor:NGB02000.1
+scaffold_235	24021	1..35	adaptor:NGB02000.1
+scaffold_235	24021	23983..24021	adaptor:NGB02000.1
+scaffold_236	23472	1..35	adaptor:NGB02000.1
+scaffold_237	23368	1..32	adaptor:NGB02000.1
+scaffold_244	22855	22821..22855	adaptor:NGB02000.1
+scaffold_246	22754	7663..7687	adaptor:NGB02000.1
+scaffold_248	22697	1..33	adaptor:NGB02000.1
+scaffold_25	199086	123440..123474	adaptor:NGB02000.1
+scaffold_25	199086	199055..199086	adaptor:NGB02000.1
+scaffold_251	22425	22396..22425	adaptor:NGB02000.1
+scaffold_253	22293	1..31	adaptor:NGB02000.1
+scaffold_254	22209	22178..22209	adaptor:NGB02000.1
+scaffold_262	21538	1..30	adaptor:NGB02000.1
+scaffold_267	21320	21284..21320	adaptor:NGB02000.1
+scaffold_269	21137	1..27	adaptor:NGB02000.1
+scaffold_269	21137	21106..21137	adaptor:NGB02000.1
+scaffold_271	20870	1..31	adaptor:NGB02000.1
+scaffold_271	20870	20837..20870	adaptor:NGB02000.1
+scaffold_275	20584	20549..20584	adaptor:NGB02000.1
+scaffold_278	20341	20311..20341	adaptor:NGB02000.1
+scaffold_286	20049	1..36	adaptor:NGB02000.1
+scaffold_287	19998	1..39	adaptor:NGB02000.1
+scaffold_295	19607	1..38	adaptor:NGB02000.1
+scaffold_295	19607	19569..19607	adaptor:NGB02000.1
+scaffold_296	19571	1..41	adaptor:NGB02000.1
+scaffold_300	19437	1..35	adaptor:NGB02000.1
+scaffold_301	19348	19311..19348	adaptor:NGB02000.1
+scaffold_305	19070	19037..19070	adaptor:NGB02000.1
+scaffold_309	18980	1..36	adaptor:NGB02000.1
+scaffold_311	18901	18866..18901	adaptor:NGB02000.1
+scaffold_32	133313	54208..54233	adaptor:NGB02000.1
+scaffold_327	18543	4661..4686	adaptor:NGB02000.1
+scaffold_332	18345	18307..18345	adaptor:NGB02000.1
+scaffold_334	18270	18237..18270	adaptor:NGB02000.1
+scaffold_337	18211	1..39	adaptor:NGB02000.1
+scaffold_338	18203	1..43	adaptor:NGB02000.1
+scaffold_34	129095	129064..129095	adaptor:NGB02000.1
+scaffold_340	18108	1..34	adaptor:NGB02000.1
+scaffold_342	18073	18040..18073	adaptor:NGB02000.1
+scaffold_35	127048	73992..127048	mitochondrion
+scaffold_350	17865	17830..17865	adaptor:NGB02000.1
+scaffold_352	17842	17808..17842	adaptor:NGB02000.1
+scaffold_354	17733	17702..17733	adaptor:NGB02000.1
+scaffold_355	17687	17656..17687	adaptor:NGB02000.1
+scaffold_356	17661	1..34	adaptor:NGB02000.1
+scaffold_357	17658	1..35	adaptor:NGB02000.1
+scaffold_357	17658	11080..11105	adaptor:NGB02000.1
+scaffold_364	17484	1096..1121	adaptor:NGB02000.1
+scaffold_364	17484	17448..17484	adaptor:NGB02000.1
+scaffold_367	17397	1..33	adaptor:NGB02000.1
+scaffold_368	17394	550..574	adaptor:NGB02001.1
+scaffold_37	119603	101399..101424	adaptor:NGB02000.1
+scaffold_37	119603	119566..119603	adaptor:NGB02000.1
+scaffold_373	17298	17263..17298	adaptor:NGB02000.1
+scaffold_375	17213	17173..17213	adaptor:NGB02000.1
+scaffold_378	17143	1..35	adaptor:NGB02000.1
+scaffold_378	17143	9500..9524	adaptor:NGB02000.1
+scaffold_38	107986	54307..54338	adaptor:NGB02000.1
+scaffold_381	17071	1..41	adaptor:NGB02000.1
+scaffold_385	16909	3045..3071	adaptor:NGB02000.1
+scaffold_386	16900	1..40	adaptor:NGB02000.1
+scaffold_386	16900	16871..16900	adaptor:NGB02000.1
+scaffold_391	16598	1..39	adaptor:NGB02000.1
+scaffold_391	16598	9628..9653	adaptor:NGB02000.1
+scaffold_391	16598	16572..16598	adaptor:NGB02000.1
+scaffold_398	16449	16411..16449	adaptor:NGB02000.1
+scaffold_40	106604	1..36	adaptor:NGB02000.1
+scaffold_40	106604	106575..106604	adaptor:NGB02000.1
+scaffold_401	16374	1..74	adaptor:NGB02000.1
+scaffold_403	16356	1..48	adaptor:NGB02000.1
+scaffold_409	16224	16189..16224	adaptor:NGB02000.1
+scaffold_414	16156	1..41	adaptor:NGB02000.1
+scaffold_423	16010	1..42	adaptor:NGB02000.1
+scaffold_43	94432	1..40	adaptor:NGB02000.1
+scaffold_43	94432	94403..94432	adaptor:NGB02000.1
+scaffold_433	15845	3519..3546	adaptor:NGB02000.1
+scaffold_433	15845	6925..6958	adaptor:NGB02000.1
+scaffold_433	15845	15814..15845	adaptor:NGB02000.1
+scaffold_451	15472	1..42	adaptor:NGB02000.1
+scaffold_457	15367	15329..15367	adaptor:NGB02000.1
+scaffold_469	15152	1..40	adaptor:NGB02000.1
+scaffold_470	15128	1..39	adaptor:multiple
+scaffold_470	15128	15089..15128	adaptor:multiple
+scaffold_471	15114	15084..15114	adaptor:NGB02000.1
+scaffold_472	15091	15056..15091	adaptor:NGB02000.1
+scaffold_479	14988	14949..14988	adaptor:NGB02000.1
+scaffold_481	14974	1..38	adaptor:NGB02000.1
+scaffold_488	14882	1..33	adaptor:NGB02000.1
+scaffold_51	83874	1..35	adaptor:NGB02000.1
+scaffold_51	83874	34268..34296	adaptor:NGB02000.1
+scaffold_51	83874	83849..83874	adaptor:NGB02000.1
+scaffold_511	14439	14399..14439	adaptor:NGB02000.1
+scaffold_512	14423	130..155	adaptor:NGB02000.1
+scaffold_519	14326	14296..14326	adaptor:NGB02000.1
+scaffold_523	14283	1..26	adaptor:NGB02000.1
+scaffold_528	14184	1..38	adaptor:NGB02000.1
+scaffold_553	13727	13693..13727	adaptor:NGB02000.1
+scaffold_563	13552	1..36	adaptor:NGB02000.1
+scaffold_564	13540	13506..13540	adaptor:NGB02000.1
+scaffold_57	79448	23375..23400	adaptor:NGB02000.1
+scaffold_579	13321	6896..6920	adaptor:NGB02000.1
+scaffold_590	13114	13082..13114	adaptor:NGB02000.1
+scaffold_597	13035	12225..12252	adaptor:NGB02000.1
+scaffold_597	13035	13001..13035	adaptor:NGB02000.1
+scaffold_599	13030	12996..13030	adaptor:NGB02000.1
+scaffold_60	77260	77228..77260	adaptor:NGB02001.1
+scaffold_601	13023	1..37	adaptor:NGB02000.1
+scaffold_602	12987	1..39	adaptor:NGB02000.1
+scaffold_604	12972	1..34	adaptor:NGB02000.1
+scaffold_604	12972	10182..10207	adaptor:NGB02000.1
+scaffold_606	12955	1..42	adaptor:NGB02000.1
+scaffold_607	12945	1..34	adaptor:NGB02000.1
+scaffold_610	12882	1..38	adaptor:NGB02000.1
+scaffold_610	12882	12850..12882	adaptor:NGB02000.1
+scaffold_617	12799	1..30	adaptor:NGB02000.1
+scaffold_620	12773	12735..12773	adaptor:NGB02000.1
+scaffold_634	12629	1..42	adaptor:NGB02000.1
+scaffold_636	12583	12549..12583	adaptor:NGB02000.1
+scaffold_658	12307	1583..1610	adaptor:NGB02000.1
+scaffold_662	12170	6295..6320	adaptor:NGB02000.1
+scaffold_663	12168	1..37	adaptor:NGB02000.1
+scaffold_664	12134	1..41	adaptor:NGB02000.1
+scaffold_666	12114	12079..12114	adaptor:NGB02000.1
+scaffold_667	12092	12058..12092	adaptor:NGB02000.1
+scaffold_68	73056	1..35	adaptor:NGB02000.1
+scaffold_68	73056	42997..73056	mitochondrion
+scaffold_681	11989	1..31	adaptor:NGB02000.1
+scaffold_682	11984	1..31	adaptor:NGB02000.1
+scaffold_694	11872	1..32	adaptor:NGB02000.1
+scaffold_703	11786	94..3543	vector/etc
+scaffold_704	11785	1..39	adaptor:NGB02000.1
+scaffold_71	71557	26403..26457	adaptor:NGB02000.1
+scaffold_73	68295	24535..24570	adaptor:NGB02000.1
+scaffold_730	11540	1..27	adaptor:NGB02000.1
+scaffold_730	11540	11501..11540	adaptor:NGB02000.1
+scaffold_732	11510	11474..11510	adaptor:NGB02000.1
+scaffold_745	11346	1..35	adaptor:NGB02000.1
+scaffold_745	11346	11313..11346	adaptor:NGB02000.1
+scaffold_748	11324	11286..11324	adaptor:NGB02000.1
+scaffold_761	11139	1..38	adaptor:NGB02000.1
+scaffold_761	11139	2704..2729	adaptor:NGB02000.1
+scaffold_763	11062	489..513	adaptor:NGB02000.1
+scaffold_781	10877	1..36	adaptor:NGB02000.1
+scaffold_783	10871	1..35	adaptor:NGB02000.1
+scaffold_783	10871	10836..10871	adaptor:NGB02000.1
+scaffold_785	10860	1..44	adaptor:NGB02000.1
+scaffold_786	10859	1..36	adaptor:NGB02000.1
+scaffold_796	10785	10746..10785	adaptor:NGB02000.1
+scaffold_80	60386	1..4729	virs:prokaryotic viruses
+scaffold_809	10686	1..32	adaptor:NGB02000.1
+scaffold_81	60469	38028..38063	adaptor:NGB02000.1
+scaffold_810	10674	1..38	adaptor:NGB02000.1
+scaffold_813	10655	10620..10655	adaptor:NGB02000.1
+scaffold_817	10613	1..34	adaptor:NGB02000.1
+scaffold_817	10613	10575..10613	adaptor:NGB02000.1
+scaffold_83	59763	59728..59763	adaptor:NGB02000.1
+scaffold_843	10436	10402..10436	adaptor:NGB02000.1
+scaffold_85	56580	56549..56580	adaptor:NGB02000.1
+scaffold_857	10325	1..42	adaptor:NGB02000.1
+scaffold_857	10325	10291..10325	adaptor:NGB02000.1
+scaffold_865	10244	1..34	adaptor:NGB02000.1
+scaffold_867	10238	10204..10238	adaptor:NGB02000.1
+scaffold_887	10077	1..31	adaptor:NGB02000.1
+scaffold_904	9988	1..37	adaptor:NGB02000.1
+scaffold_926	9739	1..32	adaptor:NGB02000.1
+scaffold_928	9730	1..32	adaptor:NGB02000.1
+scaffold_93	52899	1..34	adaptor:NGB02000.1
+scaffold_93	52899	27008..27043	adaptor:NGB02000.1
+scaffold_93	52899	27144..27179	adaptor:NGB02000.1
+scaffold_931	9712	1..38	adaptor:NGB02000.1
+scaffold_938	9600	1..36	adaptor:NGB02000.1
+scaffold_939	9590	1..31	adaptor:NGB02000.1
+scaffold_947	9558	1..41	adaptor:NGB02000.1
+scaffold_947	9558	9525..9558	adaptor:NGB02000.1
+scaffold_977	9262	1..39	adaptor:NGB02000.1
+scaffold_977	9262	9231..9262	adaptor:NGB02000.1
+scaffold_980	9215	9176..9215	adaptor:NGB02000.1
+scaffold_986	9143	1..33	adaptor:NGB02000.1
+scaffold_99	49414	49385..49414	adaptor:NGB02000.1
+scaffold_995	9061	1..41	adaptor:NGB02000.1
+
+

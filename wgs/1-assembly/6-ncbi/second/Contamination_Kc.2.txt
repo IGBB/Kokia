@@ -1,0 +1,52 @@
+SUBID     	BioProject	BioSample	Organism
+--------------------------------------------------------
+SUB14235440	PRJNA1087748	SAMN40455388	Kokia cookei
+
+[] We ran your sequences through our Contamination Screen. The screen found 
+contigs that need to be trimmed and/or excluded. The results are in the 
+Contamination.txt file posted in your submission on the WGS submission portal 
+https://submit.ncbi.nlm.nih.gov/subs/genome/. More details about the 
+contamination screening process are available at https://github.com/ncbi/fcs
+
+GenBank staff will automatically remove contaminants that are found to be 
+the entire sequence or at the end of a sequence, and will post the reports 
+and edited fasta file to the submission portal. Note that internal contamination 
+will not be automatically removed since the sequence may be misassembled and 
+therefore should be split at the contamination and resubmitted as separate sequences.
+In addition, we do not automatically remove mitochondrial sequences in 
+eukaryotic submissions. 
+
+If you selected the submission portal option "Do not automatically trim or 
+remove sequences identified as contamination" then you will need 
+to adjust the sequences appropriately and then resubmit your sequences. 
+After you remove the contamination, trim any Ns at the ends of the sequence 
+and remove any sequences that are shorter than 200 nt and not part of a 
+multi-component scaffold.
+
+WARNING: If we do not hear from you by $(add.days,14), your 
+submission will be deleted from the processing queue.
+
+Note that mismatches between the name of the adaptor/primer identified in the screen 
+and the sequencing technology used to generate the sequencing data should not be used 
+to discount the validity of the screen results as the adaptors/primers of many 
+different sequencing platforms share sequence similarity.
+
+
+Adaptor:
+[] Some of the sequences hit primers or adaptors used in Illumina, 
+454, or other sequencing strategies or platforms.  Adaptor at the 
+end of a sequence should be removed. However, if adaptors are 
+present within sequences then you should strongly consider 
+splitting the sequences at the adaptor because the adaptor sequence 
+could have been the region of overlap, causing a misassembly.
+
+
+Skipped 2,153 same as before; no new sequences to screen.
+Note: 77 sequences with runs of Ns 10 bp or longer (or those longer that 20 MB) were split before comparing.
+1 sequence to trim
+
+Trim:
+Sequence name, length, span(s), apparent source
+Kc_05	50961108	39070673..39070703	adaptor:NGB02000.1-not_cleaned
+
+

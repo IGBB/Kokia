@@ -64,7 +64,7 @@ git annex add canu.contigs.fasta.gz \
 
 - Create combined FASTQ file
   #+header: :var runs=../0-raw/readme.org:kk-nanopore-sup[,1]
-  #+begin_src sh :tangle 1-assembly/kk/1-combine.sh
+  #+begin_src sh :tangle 1-assemble/kk/1-combine.sh
 ROOT=$(git rev-parse --show-toplevel)
 
 for file in "${runs[@]}"; do
@@ -73,7 +73,7 @@ done | zcat -f > $DIR/1-assemble/kk/combined.fq
   #+end_src
 
 - Assemble with hifiasm
-  #+begin_src sh :tangle 1-assembly/kk/2-run.sh
+  #+begin_src sh :tangle 1-assemble/kk/2-run.sh
 ROOT=$(git rev-parse --show-toplevel)
 PATH=$DIR/apps/hifiasm-0.18.5-r499/:$PATH
 
@@ -533,4 +533,170 @@ kirkii
               samtools faidx $flags $Kd $chr
           done |
           gzip > $DIR/5-curate/Kd.fa.gz
+#+end_src
+* NCBI Submission
+
+Mostly ONT adapter contamination found on the end of internal contigs; however, since I've uploaded gapped fasta files, the contamination check won't remove them.
+
+
+#+begin_src perl :tangle 6-ncbi/remove.contam.pl
+
+use strict;
+use warnings;
+
+my ($contam_file, $genome_file) = @ARGV;
+my $fh;
+
+my $contam = {};
+open($fh, $contam_file);
+my $headers;
+while(<$fh>){
+    chomp;
+
+    #skip empty lines
+    next unless length $_;
+
+    if($_ eq "Exclude:" || $_ eq "Trim:"){
+        $_ = readline $fh;
+        chomp;
+
+        $headers=[split ", "];
+        next;
+    }
+
+    #skip header lines
+    next unless defined $headers;
+
+    my %d;
+    @d{@$headers} = split "\t";
+
+    $contam->{$d{"Sequence name"}} ||= [];
+    push(@{$contam->{$d{"Sequence name"}}}, $d{"span(s)"});
+}
+close($fh);
+
+open($fh, $genome_file);
+my $curpos;
+while(<$fh>) {
+    next unless s/^>//;
+    chomp;
+
+    my $h = $_;
+    my $s ="";
+    for ($curpos = tell($fh); $_ = readline($fh); $curpos = tell($fh)) {
+        if(/^>/){
+            seek($fh, $curpos, 0);
+            last;
+        }
+        chomp;
+        $s .= $_;
+    }
+
+    if($contam->{$h}){
+
+        # trim
+        if(defined($contam->{$h}->[0])){
+            foreach my $range (@{$contam->{$h}}){
+                my ($start, $end) = split "[.][.]", $range, 2;
+                $start -= 1;
+                my $length = $end - $start;
+
+                my $type;
+                if($start == 0 ||
+                   substr($s, $start-1, 1) eq "N" ||
+                   substr($s, $end, 1) eq "N" ||
+                   substr($s, $end, 1) eq "") {
+                    $type = "Extending";
+                } else {
+                    $type = "Adding";
+                }
+
+                print STDERR join "\t", $h, $range, $length, $type,
+                    substr($s, $start, $length);
+                print STDERR "\n";
+
+                my $check = length($s);
+                substr($s, $start, $length, "X"x$length);
+                die "$check != " . length($s)
+                    unless $check == length($s);
+
+                print STDERR substr($s, $start, $length);
+                print STDERR "\n"
+            }
+        # exclude
+        }else{
+            print STDERR join "\t", $h, "Exclude";
+            print STDERR "\n";
+            next;
+        }
+    }
+
+    my $gap = "N"x100;
+    printf ">%s\n%s\n", $h,
+        join($gap, grep {length($_) >= 200} split "[NXnx]+", $s);
+}
+close($fh);
+#+end_src
+
+First Pass
+#+begin_src local
+for i in Kc Kd Kk; do
+    ./6-ncbi/remove.contam.pl \
+        6-ncbi/first/Contamination_$i.txt \
+        5-curate/$i.fa \
+        2> 6-ncbi/first/$i.report |
+        fold -w60 > 6-ncbi/first/$i.fa;
+done
+#+end_src
+
+Second Pass.
+#+begin_src local
+for i in Kc Kk; do
+    gunzip 6-ncbi/$i.fa.gz
+    ./6-ncbi/remove.contam.pl \
+        6-ncbi/second/Contamination_$i.2.txt \
+        6-ncbi/$i.fa \
+        2> 6-ncbi/second/$i.report |
+        fold -w60 > 6-ncbi/second/$i.fa;
+    ./6-ncbi/seq-lengh.pl 6-ncbi/second/$i.fa \
+        > 6-ncbi/second/$i.len
+done
+#+end_src
+
+#+RESULTS:
+
+#+begin_src perl :tangle 6-ncbi/seq-lengh.pl
+
+use strict;
+use warnings;
+
+use List::Util qw/min max/;
+
+my ($genome_file) = @ARGV;
+my $fh;
+
+open($fh, $genome_file);
+my $curpos;
+while(<$fh>) {
+    next unless s/^>//;
+    chomp;
+
+    my $h = $_;
+    my $s ="";
+    for ($curpos = tell($fh); $_ = readline($fh); $curpos = tell($fh)) {
+        if(/^>/){
+            seek($fh, $curpos, 0);
+            last;
+        }
+        chomp;
+        $s .= $_;
+    }
+
+    my @contigs = map {length} split 'NN*', $s;
+
+    print join "\t", $h, length($s), scalar(@contigs),
+        min(@contigs), max(@contigs);
+    print "\n";
+}
+close($fh);
 #+end_src
