@@ -1,0 +1,15 @@
+#Copy Numver Variation analysis:
+#Create list files for each species using pangenome:
+awk -F'\t' 'NR==1 {print "og", "Gokir"} NR>1 {count_pat=0; while(match($10, /Gokir/)) {count_pat ++; $10=substr($10, RSTART+RLENGTH)} print $4, count_pat}' ../Gokir_pan.txt > Gokir.list
+awk -F'\t' 'NR==1 {print "og", "Kocoo"} NR>1 {count_pat=0; while(match($11, /Kocoo/)) {count_pat ++; $11=substr($11, RSTART+RLENGTH)} print $4, count_pat}' ../Gokir_pan.txt > Kocoo.list
+awk -F'\t' 'NR==1 {print "og", "Kodry"} NR>1 {count_pat=0; while(match($12, /Kodry/)) {count_pat ++; $12=substr($12, RSTART+RLENGTH)} print $4, count_pat}' ../Gokir_pan.txt > Kodry.list
+awk -F'\t' 'NR==1 {print "og", "Kokau"} NR>1 {count_pat=0; while(match($13, /Kokau/)) {count_pat ++; $13=substr($13, RSTART+RLENGTH)} print $4, count_pat}' ../Gokir_pan.txt > Kokau.list
+#edit *.list files ":%s/ \+/\t/g"
+paste Gokir.list Kocoo.list Kodry.list Kokau.list | cut -f1-2,4,6,8 > list.pan
+sort -u list.pan > list.pan.red
+#edit list.pan.red
+#count presence/absence with make.table.R for list.pan.red:
+
+#load slurm modules:
+module load r-tidyverse/1.3.2-py310-r42-ftebeob
+Rscript make.table.R

@@ -1,0 +1,75 @@
+#Diversity run with CODEML:
+#create directories:
+mkdir aln_files/ cf_files/ output_files/ renamed/
+#run codeml:
+#rename files:
+for i in ../phylogeny/aligned/nt/*
+        do awk 'NR==FNR{search[$1]=$2; next} /^>/{sub(/^>/,">"search[substr($0,2)]" ");} 1' ../phylogeny/list.names $i > renamed/$(basename $i .fa).ren;
+done
+#make phylip files for codeml:
+module load emboss/6.6.0
+for i in  renamed/* ;
+        do seqret -sequence $i -outseq $(basename $i .ren).phy -osformat phylipnon  ;
+done
+ls *.phy | sed 's/.phy//' > list.files
+mv *.phy aln_files
+
+#make config files:
+while read LINE ;
+        do  name=$(echo $LINE); sed "s/XXXXX/$name/g" codeml.conf > $LINE.cf ;
+done < list.files
+mv *cf cf_files/
+#run codeml:
+#load slurm modules:
+module load paml/4.10.7-ctgh7xc
+for i in cf_files/*cf ;
+        do codeml $i ;
+done
+mv *txt output_files
+
+#Reformat output files from CODEML:
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Gok|t'  | grep 'Koc' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > GokirKocoo.tmp
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Gok|t'  | grep 'Kod' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > GokirKodry.tmp
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Gok|t'  | grep 'Kok' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > GokirKokau.tmp
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Koc|t'  | grep 'Kod' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > KocooKodry.tmp
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Koc|t'  | grep 'Kok' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > KocooKokau.tmp
+for i in output_files/* ;
+        do echo $(basename $i .aln.txt) ;  cat  $i | egrep 'Kod|t'  | grep 'Kok' -A1| tail -n1 |sed 's/= \+/\t/g' | sed 's/ \+/\t/g' ; 
+done > KodryKokau.tmp
+#edit .tmp files in vi: :%s/\nt/\tt
+#edit :%s/99.000/NA/g
+#Capture specific columns:
+cut -f1,9 GokirKocoo.tmp >  GokirKocoo.dNdS
+cut -f1,9 GokirKodry.tmp >  GokirKodry.dNdS
+cut -f1,9 GokirKokau.tmp >  GokirKokau.dNdS
+cut -f1,9 KocooKodry.tmp >  KocooKodry.dNdS
+cut -f1,9 KocooKokau.tmp >  KocooKokau.dNdS
+cut -f1,9 KodryKokau.tmp >  KodryKokau.dNdS
+cut -f1,11 GokirKocoo.tmp >  GokirKocoo.dN
+cut -f1,11 GokirKodry.tmp >  GokirKodry.dN
+cut -f1,11 GokirKokau.tmp >  GokirKokau.dN
+cut -f1,11 KocooKodry.tmp >  KocooKodry.dN
+cut -f1,11 KocooKokau.tmp >  KocooKokau.dN
+cut -f1,11 KodryKokau.tmp >  KodryKokau.dN
+cut -f1,13 GokirKocoo.tmp >  GokirKocoo.dS
+cut -f1,13 GokirKodry.tmp >  GokirKodry.dS
+cut -f1,13 GokirKokau.tmp >  GokirKokau.dS
+cut -f1,13 KocooKodry.tmp >  KocooKodry.dS
+cut -f1,13 KocooKokau.tmp >  KocooKokau.dS
+cut -f1,13 KodryKokau.tmp >  KodryKokau.dS
+#Create tables:
+paste <(cut -f1-2 GokirKocoo.dNdS) <(cut -f 2 GokirKodry.dNdS) <(cut -f 2 GokirKokau.dNdS) <(cut -f 2 KocooKodry.dNdS) <(cut -f2 KocooKokau.dNdS) <(cut -f2 KodryKokau.dNdS) > dnds.list
+paste <(cut -f1-2 GokirKocoo.dN) <(cut -f 2 GokirKodry.dN) <(cut -f 2 GokirKokau.dN) <(cut -f 2 KocooKodry.dN) <(cut -f2 KocooKokau.dN) <(cut -f2 KodryKokau.dN) > dn.list
+paste <(cut -f1-2 GokirKocoo.dS) <(cut -f 2 GokirKodry.dS) <(cut -f 2 GokirKokau.dS) <(cut -f 2 KocooKodry.dS) <(cut -f2 KocooKokau.dS) <(cut -f2 KodryKokau.dS) > ds.list
+#remove lines problematic lines: OG0013873, OG0013873, OG0013873, OG0013873, OG0013873, OG0013873, OG0021635, OG0021635, OG0021635, OG0021635, OG0021635, OG0021635
+

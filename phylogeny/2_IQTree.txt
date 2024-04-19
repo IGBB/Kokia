@@ -1,0 +1,50 @@
+#Phylogenetic analysis with IQTree:
+#load slurm modules:
+module purge
+module load iq-tree/2.3.1-5z7yft7
+
+#prepare part.nt file from partions in combnt.nex
+#prepare datefile.txt:
+echo "Gokir,Kocoo,Kodry,Kokau -5.3" > datefile.txt
+
+#create directories:
+mkdir info_aln/ renamed/nt_infosites/ loci_out/
+#create variables:
+INPUT="combnt.fasta"
+PART="part.nt"
+ALN_DIR="renamed/nt"
+ALN_DIR2="renamed/nt_infosites/"
+
+#infer species tree:
+iqtree2 -T $SLURM_NPROCS  -s $INPUT --seqtype DNA -m MFP -bb 1000 -alrt 1000 -abayes -bnni -p $PART --runs 10 --prefix concatnt
+#date tree:
+iqtree2 -s $INPUT  --date datefile.txt  -te  concatnt.contree --prefix concatnt.date --date-tip 0 -v
+
+#print informative sites per alignments:
+for i in $ALN_DIR/*ren;
+	do iqtree2 -s $i -m MFP -n 0
+done
+
+#mv renamed/nt/*ren.* info_aln/
+for i in info_aln/*.log ;
+	do echo $(basename $i .ren.log)  ; grep 'parsimony-' $i | cut -d ' ' -f1 ;
+done > count.infosites
+#reformat count.infosites:
+awk '$2>0 ' count.infosites | cut -f1 > count.infosites.list
+while read LINE ;
+       do cp renamed/nt/$LINE.ren renamed/nt_infosites/ ;
+done < count.infosites.list
+
+#infer locus trees:
+#for the first 4999 files:
+file=$(ls -1 $ALN_DIR2/*.ren | sed -n ${SLURM_ARRAY_TASK_ID}p)
+#for the rest:
+LOGICAL_SLURM_ARRAY_TASK_ID=$((SLURM_ARRAY_TASK_ID+8000))
+file=$(ls -1 $ALN_DIR2/*.ren | sed -n ${LOGICAL_SLURM_ARRAY_TASK_ID}p)
+
+name=$(basename $file .ren)
+iqtree2 -s $ALN_DIR2/$name.ren --prefix trees/locint/$name -T AUTO -B 1000 -m MFP
+cat trees/locint/*contree > loci.treefile
+
+#compute gene concordance factors:
+iqtree2 -t trees/concatnt/concatnt.contree --gcf loci.treefile --prefix concordg

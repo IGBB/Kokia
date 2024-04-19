@@ -1,0 +1,28 @@
+#Phyloparts and piechart runs:
+#make tree directory:
+mkdir sg_trees/
+#load slurm modules:
+module load py-ete3/3.1.2-py310-46bvzjd ete3/3.1.1 py-pyqt5/5.13.1-py310-nylaxt3 py-matplotlib/3.7.2-py310-ntzgvl4
+
+#make outgroup list:
+echo 'Gokir' > outgroup.list
+#reroot trees:
+cp ../trees/locint/*contree ./
+ls *contree > genelist.txt
+while read LINE ; do cp ../trees/locint/$LINE ./ ; done < genelist.txt
+
+#reroot trees:
+parallel "python /work/LAS/jfw-lab/ehsan/bin/Python_scripts/phyloscripts/phypartspiecharts/reroot_trees.py {} outgroup.list > {}.retre" :::: genelist.txt
+cat *retre > alltrees.tre
+rm -f *contree
+python phyloscripts/phypartspiecharts/reroot_trees.py ../trees/concatnt/concatnt.contree outgroup.list > sptree.tre
+mv *retre sg_trees/
+#run phyloparts with bootstraps threshold set at 0.7:
+java -jar  phyparts/target/phyparts-0.0.1-SNAPSHOT-jar-with-dependencies.jar -a 1 -v -d sg_trees/ -m sptree.tre  -o phypart -s 0.7
+#in directory containing Phyloparts outputs:
+TREECOUNT=$(wc -l alltrees.tre)
+python  phyloscripts/phypartspiecharts/phypartspiecharts.py sptree.tre phypart $TREECOUNT --to_csv
+
+#load slurm modules:
+module load r-phangorn/2.10.0-py310-r42-vjodo6v	r-ape/5.6-2-py310-r42-vp2h3xl
+Rscript piechart.R

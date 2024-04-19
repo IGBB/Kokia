@@ -1,0 +1,54 @@
+#Alignment pipeline:
+#load slurm modules:
+module purge
+module load mafft/7.508
+module load gblocks/0.91b
+#create directories:
+mkdir  aligned/ aa_files/ cds_files/ renamed/ gblocked/ trees/ nexus/ list
+mkdir aligned/aa/ aligned/nt/ renamed/aa/ renamed/nt/ renamed/codon/ gblocked/aa gblocked/nt trees/aa trees/nt nexus/aa nexus/nt nexus/codon
+
+#requires list.name file from FormatData.txt step
+#create list of single-copy OGs:
+for i in orthofinder/Results_Mar25/Single_Copy_Orthologue_Sequences/*fa ;
+	do grep '>' $i | sed 's/>//' > list/$(basename $i .fa).list ;
+done
+#prepare nt fasta files:
+for i in list/OG00* ;
+	do grep -f $i ../cds/* -A1 | sed 's/^\..\+://' | sed 's/^\..\+-//' > cds_files/$(basename $i .list).fa ;
+done
+
+#align sequences:
+#aa sequences:
+cp orthofinder/Results_Mar25/Single_Copy_Orthologue_Sequences/*fa aa_files/
+for i in aa_files/*fa;
+	do mafft --thread $SLURM_NPROCS --reorder --auto $i > aligned/aa/$(basename $i .fa).aln ;
+done
+#align nt using aa alignment:
+for i in aligned/aa/*aln ;
+	do pal2nal.v14.1/pal2nal.pl $i cds_files/$(basename $i .aln).fa -output fasta >  aligned/nt/$(basename $i .aln).aln ;
+done #> log 2>&1
+#filter alignments with Gblocks:
+for i in aligned/nt/*aln;
+	do Gblocks $i -b5=a -p=n ;
+done
+mv aligned/nt/*-gb gblocked/nt/
+
+#rename sequences:
+for i in gblocked/nt/*-gb;
+	do awk 'NR==FNR{search[$1]=$2; next} /^>/{sub(/^>/,">"search[substr($0,2)]" ");} 1' list.names $i  > renamed/nt/$(basename $i .aln-gb).ren;
+done
+
+#convert fasta to nexus format
+module purge
+module load emboss/6.6.0
+for i in renamed/nt/*ren ;
+       do seqret -sequence $i  -outseq nexus/nt/$(basename $i .ren).nex  -osformat nexus ;
+done
+
+#merge sigle alignments with seqCat.py:
+ls nexus/nt/*nex > list.nt
+
+module load python/3.10.10-zwlkg4l
+python /work/LAS/jfw-lab/ehsan/bin/Python_scripts/seqCat.py -l list.nt -o combnt.nex
+seqret -sequence  combnt.nex -outseq combnt.phy -osformat phylip
+seqret -sequence  combnt.nex -outseq combnt.fasta -osformat fasta

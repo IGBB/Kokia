@@ -1,0 +1,29 @@
+#Slurm cluster commands:
+#load slurm modules:
+module purge
+module load genespace/1.2.3
+exec.genespace.sif env
+Rscript genespace_4sp.R
+Rscript genespace_Kokia.R
+
+
+#Prepare syntenic orthogroup (SynOG) files:
+#create pattern.txt file:
+Gokir
+Kocoo
+Kodry
+Kokau
+
+#filter pangenome according to pattern.txt:
+find_lines.sh ==> pattern.txt ==> Gokir_pan.txt ==> Gokir_pan.all
+#remove SynOGs containing for parallogs:
+grep '|' Gokir_pan.txt | cut -f5 > list.dupl
+grep -v -f list.dupl  Gokir_pan.txt > Gokir_pan.red.txt
+#edit parsepangenome.py to match columns in Gokir_pan.red.txt: 9-13
+mkdir list list_tmp
+python parsepangenome.py Gokir_pan.red.txt list_tmp/
+#remove list files with >4 (all) species:
+wc -l list_tmp/* | sort | grep  '3 list' | sed 's/^ \+3 list_tmp\///'| sort > list.keep
+while read LINE ; 
+	do cp list_tmp/$LINE list/ ; 
+done < list.keep

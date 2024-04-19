@@ -1,0 +1,32 @@
+#Formatting input data:
+#load slurm modules:
+module purge
+module load cufflinks/2.2.1
+
+#create directories:
+mkdir bed peptide cds
+for i in *gtf;
+        do egrep -v 'scaffold|nplaced' $i > $(basename $i .gtf).chr.gtf
+done
+#Prepare bed files from gff:
+for i in *chr.gtf ;
+        do awk '$3 ~ "transcript" {print $0}' $i | cut -f1,4-5,9 > $(basename $i .gff).bed ;
+done
+#create new CDS and aa files:
+for i in *chr.gtf ;
+        do gffread -J -x cds/$(basename $i .chr.gtf).fa -y peptide/$(basename $i .chr.gtf).fa -g $(basename $i .gtf).fa $i ;
+done
+
+#filter bed files based on gene lists from fasta files:
+for i in peptide/*fa ;
+	do grep '>' $i |  sed 's/>//' > $(basename $i .fa).list ;
+done
+for i in *.list ;
+	do grep -f $i $(basename $i .list).bed > bed/$(basename $i .list).bed; 
+done
+
+#create list.name file containing all genes per genome:
+awk '{print $1,"\tGokir"}' Gokir.list > list.name
+awk '{print $1,"\tKocoo"}' Kocoo.list >> list.name
+awk '{print $1,"\tKodry"}' Kodry.list >> list.name
+awk '{print $1,"\tKokau"}' Kokau.list >> list.name
