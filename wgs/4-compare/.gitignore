@@ -18,3 +18,15 @@ Kk.genome.json
 Kk.protein.json
 Kk.transcriptome.json
 3-busco/run.sh
+2-hic/1-bwa/Kocoo-Kocoo.bam.bai
+2-hic/1-bwa/Kodry-Kodry.bam.bai
+2-hic/1-bwa/Kokau-Kokau.bam.bai
+4-validate/align.reads.sh
+4-validate/coverages.sh
+4-validate/Kd.bam.bai
+4-validate/Kk.bam.bai
+5-merqury/db.sh
+5-merqury/download.sh
+5-merqury/run.sh
+6-lai/next.sh
+6-lai/run.sh
