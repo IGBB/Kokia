@@ -1,55 +1,57 @@
 #+title: Compare Genomes
-#+PROPERTY:  header-args :var DIR=(my/dir)
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
 #+name:anno
 | Name  | braker gtf                | Fasta                         |
 |-------+---------------------------+-------------------------------|
-| Kocoo | 2-annotation/Kocoo.gtf.gz | 1-assembly/5-curate/Kc.fa.gz  |
-| Kodry | 2-annotation/Kodry.gtf.gz | 1-assembly/5-curate/Kd.fa.gz  |
-| Kokau | 2-annotation/Kokau.gtf.gz | 1-assembly/5-curate/Kk.fa.gz  |
+| Kocoo | 2-annotation/Kocoo.gtf.gz | 1-assembly/6-ncbi/Kc.fa.gz    |
+| Kodry | 2-annotation/Kodry.gtf.gz | 1-assembly/6-ncbi/Kd.fa.gz    |
+| Kokau | 2-annotation/Kokau.gtf.gz | 1-assembly/6-ncbi/Kk.fa.gz    |
 | Gokir | 2-annotation/Gokir.gtf.gz | 1-assembly/0-ref/kirkii.fa.gz |
 
 
-* Genespace
+* Genespace (all)
 
 - Get bed files
   #+header: :var anno=anno
   #+begin_src sh :tangle 1-genespace/bed/run.sh
-    ROOT=$(git rev-parse --show-toplevel)
+ROOT=$(git rev-parse --show-toplevel)
 
-    cat <<<"$anno" |
-        while read name gtf fasta; do
-            zcat $ROOT/wgs/$gtf |
-                grep '^K' |
-                awk '$3 == "transcript" {print $1,$4,$5,$9}' \
-                    FS="\t" OFS="\t" > $DIR/1-genespace/bed/$name.bed
-        done
+for name in "${!anno[@]}"; do
+    read gtf fasta <<<"${anno[$name]}"
+    zcat $ROOT/wgs/$gtf |
+        grep '^K' |
+        awk '$3 == "transcript" {print $1,$4,$5,$9}' \
+            FS="\t" OFS="\t" > $DIR/1-genespace/bed/$name.bed
+done
   #+end_src
 
   #+RESULTS:
-
 - Get peptide files
   #+header: :var anno=anno
   #+begin_src sh :tangle 1-genespace/peptide/run.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
-    PATH=$DIR/apps/samtools-1.17/:$PATH
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
+PATH=$DIR/apps/samtools-1.17/:$PATH
 
-    cat <<<"$anno" |
-        while read name gtf fasta; do
-            tmp_fasta=$(mktemp)
-            tmp_gtf=$(mktemp)
+for name in "${!anno[@]}"; do
+    readarray -t lib <<<"${anno[$name]}"
+    gtf=${lib[0]}
+    fasta=${lib[1]}
 
-            zcat $ROOT/wgs/$fasta > $tmp_fasta
-            zcat $ROOT/wgs/$gtf |
-                grep '^K' > $tmp_gtf
-            
-            gffread -J -y $DIR/1-genespace/peptide/$name.fa \
-                    -g $tmp_fasta $tmp_gtf
-                                   
-            rm $tmp_fasta
-            rm $tmp_gtf
-        done
+    tmp_fasta=$(mktemp)
+    tmp_gtf=$(mktemp)
+
+    zcat $ROOT/wgs/$fasta > $tmp_fasta
+    zcat $ROOT/wgs/$gtf |
+        grep '^K' > $tmp_gtf
+
+    gffread -J -y $DIR/1-genespace/peptide/$name.fa \
+        -g $tmp_fasta $tmp_gtf
+
+    rm $tmp_fasta
+    rm $tmp_gtf
+done
   #+end_src
 - Run Genescape
   #+begin_src R :tangle 1-genespace/run.R
@@ -67,6 +69,221 @@
     
   #+end_src
 
+- Get Pangenome
+ #+begin_src R :tangle 1-genespace/run.pangenome.R
+library(GENESPACE)
+
+load(file.path(DIR, "1-genespace", "results", "gsParams.rda"),
+     verbose = TRUE)
+
+data.table::fwrite(file = file.path(DIR, "1-genespace", "Gokir_syn.txt"),
+       syntenic_pangenes(gsParam = gsParam,
+                         refGenome = "Gokir",
+                         maxPlacePerChr = 2,
+                         minPropInterp2keep = 0.75),
+       row.names = F, quote = F, sep = '\t')
+
+data.table::fwrite(file = file.path(DIR, "1-genespace", "Gokir_pan.txt"),
+       query_pangenes(gsParam = gsParam,
+                      refGenome = "Gokir",
+                      showArrayMem=F,
+                      showNSOrtho=F),
+       row.names = F, quote = F, sep = '\t')
+
+ #+end_src
+
+- Fix riparian plot
+ #+begin_src R :tangle 1-genespace/run.riparian.R
+library(ggplot2)
+library(GENESPACE)
+
+load(file.path(DIR, "1-genespace", "results", "gsParams.rda"),
+     verbose = TRUE)
+
+invchr <- data.frame(genome=rep("Kodry", 7),
+                     chr=sprintf("Kd_%02d", c(3,6:11)))
+
+## plot_riparian(gsParam = gsParam,
+##               invertTheseChrs=invchr,
+##               genomeIDs = c("Gokir", "Kokau", "Kodry", "Kocoo"),
+##               refGenome = "Gokir",
+##               useOrder = FALSE,
+##               useRegions = FALSE,
+##               reorderBySynteny = TRUE,
+##               syntenyWeight = 1,
+##               pdfFile = file.path(DIR, "1-genespace","Gokir_def.pdf"))
+
+##custom colour & background:
+ggthemes <- theme(panel.background = element_rect(fill = "white"))
+customPal <- colorRampPalette(c("darkorange", "skyblue", "darkblue",
+                                "purple", "darkred", "salmon"))
+plot_riparian(gsParam = gsParam,
+              invertTheseChrs=invchr,
+              palette = customPal,
+              braidAlpha = .75,
+              chrFill = "lightgrey",
+              addThemes = ggthemes,
+              customRefChrOrder = c("KI_01", "KI_2_4",
+                                    sprintf("KI_%02d", c(3,5:13))),
+              genomeIDs = c("Gokir", "Kokau", "Kodry", "Kocoo"),
+              refGenome = "Gokir",
+              pdfFile = file.path(DIR, "1-genespace","Gokir_col.pdf"))
+
+
+ #+end_src
+
+
+
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote) :results verbatim
+DIR=/90daydata/gbru_kokia/Kokia/wgs/4-compare
+RES=$DIR/1-genespace/orthofinder/Results_Mar21
+
+sed -n -e 1p -e 5p \
+    $RES/Comparative_Genomics_Statistics/Statistics_PerSpecies.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+sed -n -e 7p -e 17p -e 18p\
+    $RES/Comparative_Genomics_Statistics/Statistics_Overall.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+
+echo ""
+sed -n -e 8p \
+    $RES/Comparative_Genomics_Statistics/Statistics_Overall.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+sed -n -e 1p -e 9,11p \
+    $RES/Comparative_Genomics_Statistics/Statistics_PerSpecies.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                                    Gokir  Kocoo  Kodry  Kokau
+Percentage of genes in orthogroups  94.9   98.1   97.4   98.1
+Number of orthogroups                           33698
+Number of orthogroups with all species present  24760
+Number of single-copy orthogroups               17356
+
+Number of species-specific orthogroups  760
+                                                     Gokir  Kocoo  Kodry  Kokau
+Number of species-specific orthogroups               344    136    165    115
+Number of genes in species-specific orthogroups      1603   636    613    544
+Percentage of genes in species-specific orthogroups  3.9    1.6    1.5    1.4
+#+end_example
+
+* Genespace (Kokia)
+- Get bed files
+  #+header: :var anno=anno[2:4,]
+  #+begin_src sh :tangle 1-genespace-kokia/bed/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+for name in "${!anno[@]}"; do
+    read gtf fasta <<<"${anno[$name]}"
+    zcat $ROOT/wgs/$gtf |
+        grep -E '^K[cdk]_([01][0-9]|2_4)' |
+        awk '$3 == "transcript" {print $1,$4,$5,$9}' \
+            FS="\t" OFS="\t" > $DIR/1-genespace-kokia/bed/$name.bed
+done
+  #+end_src
+
+  #+RESULTS:
+- Get peptide files
+  #+header: :var anno=anno[2:4,]
+  #+begin_src sh :tangle 1-genespace-kokia/peptide/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
+PATH=$DIR/apps/samtools-1.17/:$PATH
+
+for name in "${!anno[@]}"; do
+    readarray -t lib <<<"${anno[$name]}"
+    gtf=${lib[0]}
+    fasta=${lib[1]}
+
+    tmp_fasta=$(mktemp)
+    tmp_gtf=$(mktemp)
+
+    zcat $ROOT/wgs/$fasta > $tmp_fasta
+    zcat $ROOT/wgs/$gtf |
+        grep -E '^K[cdk]_([01][0-9]|2_4)' > $tmp_gtf
+
+    gffread -J -y $DIR/1-genespace-kokia/peptide/$name.fa \
+        -g $tmp_fasta $tmp_gtf
+
+    rm $tmp_fasta
+    rm $tmp_gtf
+done
+  #+end_src
+- Run Genescape
+  #+begin_src R :tangle 1-genespace-kokia/run.R
+    library(GENESPACE)
+
+    gpar <- init_genespace(
+          wd = file.path(DIR, "1-genespace-kokia") ,
+          genomeIDs=c("Kocoo", "Kodry", "Kokau"),
+          path2mcscanx = file.path(DIR, "apps", "MCScanX"),
+          path2orthofinder = file.path(DIR, "apps", "orthofinder"),
+          path2diamond = file.path(DIR, "apps", "diamond"),
+          nCores = 48)
+
+    out <- run_genespace(gpar)
+
+     save(c(gpar, out), file = "1-genespace-kokia/out.RData")
+
+  #+end_src
+
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote) :results verbatim
+DIR=/90daydata/gbru_kokia/Kokia/wgs/4-compare
+RES=$DIR/1-genespace-kokia/orthofinder/Results_Mar22
+
+sed -n -e 1p -e 3,6p \
+    $RES/Comparative_Genomics_Statistics/Statistics_PerSpecies.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+sed -n -e 7p -e 17p -e 18p\
+    $RES/Comparative_Genomics_Statistics/Statistics_Overall.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+
+echo ""
+sed -n -e 8p \
+    $RES/Comparative_Genomics_Statistics/Statistics_Overall.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+sed -n -e 1p -e 9,11p \
+    $RES/Comparative_Genomics_Statistics/Statistics_PerSpecies.tsv |
+    column -t -s$'\t' |
+    tr -d '\r'
+
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                                    Kocoo  Kodry  Kokau
+Number of genes in orthogroups      39076  38324  39102
+Number of unassigned genes          880    992    874
+Percentage of genes in orthogroups  97.8   97.5   97.8
+Percentage of unassigned genes      2.2    2.5    2.2
+Number of orthogroups                           32476
+Number of orthogroups with all species present  27330
+Number of single-copy orthogroups               20627
+
+Number of species-specific orthogroups  485
+                                                     Kocoo  Kodry  Kokau
+Number of species-specific orthogroups               168    155    162
+Number of genes in species-specific orthogroups      818    599    812
+Percentage of genes in species-specific orthogroups  2.0    1.5    2.0
+#+end_example
 
 * Hi-C
 
@@ -83,13 +300,16 @@ genomes to validate SV found in genespace.
 - Create bwa database for assembly
   #+header: :var anno=anno
   #+begin_src sh :tangle 2-hic/0-db/run.sh
-    ROOT=$(git rev-parse --show-toplevel)
-    PATH=$DIR/apps/bwa-0.7.17:$PATH
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/bwa-0.7.17:$PATH
 
-    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$anno")
-    read name gtf fasta <<<"$line"
+names=(${!anno[@]})
+name=${names[$SLURM_ARRAY_TASK_ID]}
+readarray -t lib <<<"${anno[$name]}"
+gtf=${lib[0]}
+fasta=${lib[1]}
 
-    bwa index -a bwtsw -p $DIR/2-hic/0-db/$name $ROOT/wgs/$fasta
+bwa index -a bwtsw -p $DIR/2-hic/0-db/$name $ROOT/wgs/$fasta
   #+end_src
 - Align Hi-C data to assembly
   #+header: :var data=hic
@@ -123,54 +343,117 @@ genomes to validate SV found in genespace.
     done | parallel
   #+end_src
 
+#+begin_src remote
+ROOT=$(git rev-parse --show-toplevel)
+DIR=$ROOT/wgs/4-compare/
+PATH=$DIR/apps/hic-viz:$PATH
+
+hic-viz -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf \
+    -b 750 -s 4 \
+    -m 500 \
+    -r <(echo Kc_{01,2_4,03} Kc_{05..13}) \
+    $DIR/2-hic/1-bwa/Kocoo-Kocoo.bam > $DIR/2-hic/Kocoo.png
+#+end_src
+
+#+RESULTS:
+
+#+begin_src remote
+ROOT=$(git rev-parse --show-toplevel)
+DIR=$ROOT/wgs/4-compare/
+PATH=$DIR/apps/hic-viz:$PATH
+
+hic-viz -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf \
+    -b 750 -s 4 \
+    -m 1000 \
+    -r <(echo Kd_{01,2_4,03} Kd_{05..13}) \
+    $DIR/2-hic/1-bwa/Kodry-Kodry.bam > $DIR/2-hic/Kodry.png
+#+end_src
+
+#+RESULTS:
+
+#+begin_src remote
+ROOT=$(git rev-parse --show-toplevel)
+DIR=$ROOT/wgs/4-compare/
+PATH=$DIR/apps/hic-viz:$PATH
+
+hic-viz -f /usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf \
+    -b 750 -s 4 \
+    -m 2000 \
+    -r <(echo Kk_{01,2_4,03} Kk_{05..13}) \
+    $DIR/2-hic/1-bwa/Kokau-Kokau.bam > $DIR/2-hic/Kokau.png
+#+end_src
+
+#+RESULTS:
+
 * BUSCO
 
 - Get eudicot lineage
   #+begin_src sh :tangle 3-busco/download-lineage.sh
-  wget -O- --no-check \
-       https://busco-data.ezlab.org/v5/data/lineages/eudicots_odb10.2020-09-10.tar.gz |
+LINEAGEURL=https://busco-data.ezlab.org/v5/data/lineages/
+wget -O- --no-check $LINEAGEURL/eudicots_odb10.2024-01-08.tar.gz |
       tar -xz -C $DIR/3-busco
 #+end_src
-- Run all 
+
+#+RESULTS:
+
+- Run all
   #+header: :var anno=anno
   #+begin_src sh :tangle 3-busco/run.sh
-    PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
-    ROOT=$(git rev-parse --show-toplevel)
-    ml singularity
+PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
 
-    busco () { singularity exec -B $DIR $DIR/apps/busco-v5.5.0_cv1 busco "$@" ; }
+busco () {
+    singularity exec -B $DIR \
+    $DIR/apps/busco-v5.5.0_cv1 \
+    busco "$@"
+}
 
-    line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$anno")
-    read name gtf fasta <<<"$line"
+names=(${!anno[@]})
+name=${names[$SLURM_ARRAY_TASK_ID]}
+readarray -t lib <<<"${anno[$name]}"
+gtf=${lib[0]}
+fasta=${lib[1]}
 
-    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
-    zcat $ROOT/wgs/$fasta > $SCRATCH/$name.genome.fa
-    zcat $ROOT/wgs/$gtf |
-        grep '^K' > $SCRATCH/$name.gtf
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+zcat $ROOT/wgs/$fasta > $SCRATCH/$name.genome.fa
+zcat $ROOT/wgs/$gtf |
+    grep '^K' > $SCRATCH/$name.gtf
 
-    gffread -J \
-            -w $SCRATCH/$name.trans.fa \
-            -y $SCRATCH/$name.protein.fa \
-            -g $SCRATCH/$name.genome.fa \
-               $SCRATCH/$name.gtf
+gffread -J \
+    -w $SCRATCH/$name.trans.fa \
+    -y $SCRATCH/$name.protein.fa \
+    -g $SCRATCH/$name.genome.fa \
+    $SCRATCH/$name.gtf
 
-    for type in genome trans protein; do
-        mkdir $SCRATCH/$type
-        cd $SCRATCH/$type
-        
-        busco -i $SCRATCH/$name.$type.fa \
-          -l $DIR/3-busco/eudicots_odb10 \
-          -m $type  \
-          -o $name \
-          -c 48
+for type in genome trans protein; do
+    mkdir $SCRATCH/$type
+    cd $SCRATCH/$type
 
-        tar -C $SCRATCH/$type/$name -cf $DIR/3-busco/$name.$type.tar \
-            short_summary.specific.eudicots_odb10.$name.txt \
-            short_summary.specific.eudicots_odb10.$name.json \
-            logs \
-            run_eudicots_odb10
-    done
+    busco -i $SCRATCH/$name.$type.fa \
+        -l $DIR/3-busco/eudicots_odb10 \
+        -m $type  \
+        -o $name \
+        -c 48
+
+    tar -C $SCRATCH/$type/$name -cf $DIR/3-busco/$name.$type.tar \
+        short_summary.specific.eudicots_odb10.$name.txt \
+        short_summary.specific.eudicots_odb10.$name.json \
+        logs \
+        run_eudicots_odb10
+done
   #+end_src
+
+- stats
+  #+begin_src remote
+    for i in Kocoo Kodry Kokau Gokir; do
+        type=trans
+          tar -O -xf 3-busco/$i.$type.tar \
+            short_summary.specific.eudicots_odb10.$i.txt
+    done | less
+  #+end_src
+
+  #+RESULTS:
 
 - Graph
   #+begin_src sh  
@@ -268,3 +551,338 @@ genomes to validate SV found in genespace.
 | Kokia cookei        |        2300 |    563551662 |       0.017% |    1771125 |
 | Kokia drynarioides  |         780 |    511904237 |       0.015% |    1881333 |
 | Kokia kauaiensis    |        2094 |    556827260 |       0.019% |    1469000 |
+* Validate 600kb loss in Kc
+
+There seems to be a large loss in Kc_11. Validating it by aligning Kc reads and contigs to Kd and Kk
+
+#+header: :var runs=../0-raw/readme.org:kc-nanopore-sup[,1]
+#+begin_src sh :tangle 4-validate/align.reads.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+for file in "${runs[@]}"; do
+    tar -Oxf $ROOT/wgs/0-raw/$file
+done | zcat -f > $TMPDIR/kc.combined.fq
+
+PATH=$DIR/apps/samtools-1.20/bin/:$PATH
+PATH=$DIR/apps/minimap2-2.28_x64-linux/:$PATH
+
+minimap2 -ax map-ont -t $SLURM_CPUS_PER_TASK \
+    $ROOT/wgs/1-assembly/6-ncbi/Kk.fa.gz \
+    $TMPDIR/kc.combined.fq |
+    samtools view -Sb - |
+    samtools sort -m300G -o $DIR/4-validate/Kk.bam -
+
+samtools index $DIR/4-validate/Kk.bam
+
+minimap2 -ax map-ont -t $SLURM_CPUS_PER_TASK \
+    $ROOT/wgs/1-assembly/6-ncbi/Kd.fa.gz \
+    $TMPDIR/kc.combined.fq |
+    samtools view -Sb - |
+    samtools sort -m300G -o $DIR/4-validate/Kd.bam -
+
+samtools index $DIR/4-validate/Kd.bam
+  #+end_src
+
+#+begin_src sh :tangle 4-validate/coverages.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+PATH=$DIR/apps/samtools-1.20/bin/:$PATH
+PATH=$DIR/apps/bedtools-2.31.1/bin/:$PATH
+
+for spec in Kd Kk; do
+    zcat $ROOT/wgs/1-assembly/6-ncbi/$spec.fa.gz \
+        > $TMPDIR/$spec.fa
+    samtools faidx $TMPDIR/$spec.fa
+
+    bedtools makewindows -g $TMPDIR/$spec.fa.fai \
+        -w 20000 -s 10000 |
+        samtools bedcov /dev/stdin \
+            $DIR/4-validate/$spec.bam \
+            > $DIR/4-validate/$spec.cov
+done
+#+end_src
+#+header: :results output graphics file :file 4-validate/coverage.png
+#+header: :width 1000 :height 600 :bg white :res 100
+#+begin_src R :session coverage
+library(tidyverse)
+library(scales)
+
+data <- list.files("4-validate", ".cov", full.names = T) %>%
+  lapply(read.delim, header = F,
+         col.names = c("Chr", "Start", "End", "Coverage")) %>%
+  bind_rows %>%
+  filter(Chr %in% paste(rep(c("Kd", "Kk"), each=12),
+      rep(c("01", "2_4", "03", "05", "06",
+            "07", "08", "09", 10:13), 2),
+      sep="_")) %>%
+  separate(Chr, into=c("Ref", "ChrNum"), sep=c(3)) %>%
+  mutate(Coverage=ifelse(Coverage > 2000000, NA, Coverage),
+         y= -1 * Start,
+         ChrNum = factor(ChrNum, c("01", "2_4", "03", "05", "06",
+            "07", "08", "09", 10:13)))
+head(data)
+
+
+label_number_chr <- function(x) {
+  label_number(scale=1, scale_cut=cut_si("bp"))(-1 * x)
+}
+ggplot(data, aes(Ref, y, fill=Coverage)) +
+  geom_tile(width = 0.75) +
+  scale_y_continuous(labels = label_number_chr,
+                     expand = c(0,0)) +
+  facet_grid(cols = vars(ChrNum)) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title = element_blank())
+
+#+end_src
+
+#+RESULTS:
+[[file:4-validate/coverage.png]]
+
+
+#+begin_src sh :tangle 4-validate/align.chrs.sh
+ROOT=$(git rev-parse --show-toplevel)
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+ml minimap2/2.17
+
+minimap2 -x asm20 -t 48 \
+    $ROOT/wgs/1-assembly/6-ncbi/Kk.fa.gz \
+    $ROOT/wgs/1-assembly/6-ncbi/Kc.fa.gz \
+    > $DIR/4-validate/Kc-vs-Kk.paf
+
+minimap2 -x asm20 -t 48 \
+    $ROOT/wgs/1-assembly/6-ncbi/Kd.fa.gz \
+    $ROOT/wgs/1-assembly/6-ncbi/Kc.fa.gz \
+    > $DIR/4-validate/Kc-vs-Kd.paf
+#+end_src
+* Assembly stats
+#+header: :var anno=anno
+#+begin_src sh :tangle 5-stats/run.sh
+PATH=$DIR/apps/samtools-1.17/bin/:$PATH
+ROOT=$(git rev-parse --show-toplevel)
+ml python
+
+for name in "${!anno[@]}"; do
+    readarray -t lib <<<"${anno[$name]}"
+    gtf=${lib[0]}
+    fasta=${lib[1]}
+
+    SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+    zcat $ROOT/wgs/$fasta > $SCRATCH/$name.fa
+
+    samtools faidx $SCRATCH/$name.fa
+    cut -f 1,2 $SCRATCH/$name.fa.fai > $DIR/5-stats/$name.size
+
+    echo $name
+    cut -f 1 $SCRATCH/$name.fa.fai | head -12 |
+    samtools faidx -r - $SCRATCH/$name.fa |
+        tr -dc N |
+        wc -c
+
+    assembly_stats $SCRATCH/$name.fa > $DIR/5-stats/$name.json
+done
+#+end_src
+
+number of Ns
+| Gokir | 28700 |
+| Kodry | 76800 |
+| Kokau | 65300 |
+| Kocoo | 88900 |
+
+
+** Merqury
+
+Get data for Kd
+#+begin_src shell :tangle 5-merqury/download.sh
+for SRA in SRR61950{36..41}; do
+    URL=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/${SRA:0:6}/
+
+    if [ ${#SRA} -gt 9 ]; then
+        ACC=00${SRA:9}
+        URL+=${ACC: -3}/
+    fi
+
+    URL+=$SRA
+
+    wget -O $DIR/5-merqury/${SRA}_1.fastq.gz $URL/${SRA}_1.fastq.gz
+    wget -O $DIR/5-merqury/${SRA}_2.fastq.gz $URL/${SRA}_2.fastq.gz
+done
+
+
+#+end_src
+
+Using the nanopore data for Kc and Kk; however, this isn't ideal.
+
+#+header: :results output verbatim
+#+header: :var ROOT=(file-local-name ssh-deploy-root-remote)
+#+begin_src shell :dir (symbol-value 'ssh-deploy-root-remote)
+ml singularity
+singularity exec $ROOT/wgs/4-compare/apps/merqury-1.3.sif \
+    /usr/local/share/merqury/best_k.sh 580000000
+#+end_src
+
+#+RESULTS:
+: genome: 580000000
+: tolerable collision rate: 0.001
+: 19.5379
+
+#+header: :var kc_runs=../0-raw/readme.org:kc-nanopore-sup[,1]
+#+header: :var kk_runs=../0-raw/readme.org:kk-nanopore-sup[,1]
+#+header: :var kd_runs=../0-raw/readme.org:kd-nanopore-runs
+#+begin_src shell :tangle 5-merqury/db.sh
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/meryl-1.4.1/bin/:$PATH
+
+# for file in "${kc_runs[@]}"; do
+#     tar -Oxf $ROOT/wgs/0-raw/$file
+# done | zcat -f > $TMPDIR/kc.combined.fq
+
+# meryl count k=21 $TMPDIR/kc.combined.fq \
+#     output $DIR/5-merqury/kc.reads.meryl
+# rm $TMPDIR/kc.combined.fq
+
+# for file in "${kk_runs[@]}"; do
+#     tar -Oxf $ROOT/wgs/0-raw/$file
+# done | zcat -f > $TMPDIR/kk.combined.fq
+
+# meryl count k=21 $TMPDIR/kk.combined.fq \
+#     output $DIR/5-merqury/kk.reads.meryl
+# rm $TMPDIR/kk.combined.fq
+
+for name in "${!kd_runs[@]}"; do
+    meryl count k=21 $ROOT/wgs/0-raw/${kd_runs[$name]}/sup.pass.fq.gz \
+        output $TMPDIR/$name.meryl
+done
+meryl union-sum output $DIR/5-merqury/kd.reads.nano.meryl \
+    $(printf "$TMPDIR/%s.meryl " "${!kd_runs[@]}")
+
+
+# for SRA in SRR61950{36..41}; do
+#     meryl count k=21 $DIR/5-merqury/${SRA}_1.fastq.gz \
+#         output $TMPDIR/${SRA}_1.meryl
+#     meryl count k=21 $DIR/5-merqury/${SRA}_2.fastq.gz \
+#         output $TMPDIR/${SRA}_2.meryl
+# done
+# meryl union-sum output $DIR/5-merqury/kd.reads.meryl \
+#     $TMPDIR/SRR61950{36..41}_{1,2}.meryl
+#+end_src
+
+#+begin_src shell :tangle 5-merqury/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/samtools-1.20/bin/:$PATH
+PATH=$DIR/apps/bedtools-2.31.1/bin/:$PATH
+PATH=$DIR/apps/meryl-1.4.1/bin/:$PATH
+export MERQURY=$DIR/apps/merqury/
+
+cd $DIR/5-merqury/
+
+# zcat $ROOT/wgs/1-assembly/6-ncbi/Kc.fa.gz > $TMPDIR/Kc.fa
+# $MERQURY/merqury.sh \
+#     $DIR/5-merqury/kc.reads.meryl \
+#     $TMPDIR/Kc.fa \
+#     Kc
+
+# zcat $ROOT/wgs/1-assembly/6-ncbi/Kk.fa.gz > $TMPDIR/Kk.fa
+# $DIR/apps/merqury/merqury.sh \
+#     $DIR/5-merqury/kk.reads.meryl \
+#     $TMPDIR/Kk.fa \
+#     Kk
+
+zcat $ROOT/wgs/1-assembly/6-ncbi/Kd.fa.gz > $TMPDIR/Kd.fa
+# $DIR/apps/merqury/merqury.sh \
+#     $DIR/5-merqury/kd.reads.meryl \
+#     $TMPDIR/Kd.fa \
+#     Kd
+
+$DIR/apps/merqury/merqury.sh \
+    $DIR/5-merqury/kd.reads.nano.meryl \
+    $TMPDIR/Kd.fa \
+    Kd.nano
+#+end_src
+
+
+**** Completeness
+| Species     |     |           |           | Completeness |
+|-------------+-----+-----------+-----------+--------------|
+| Kc          | all | 370193114 | 388570679 |      95.2705 |
+| Kd-illumina | all | 373479609 | 384351053 |      97.1715 |
+| Kd-nanopore | all | 371660882 | 390679251 |       95.132 |
+| Kk          | all | 376432916 | 400021334 |      94.1032 |
+**** QV
+
+| Species     |         |           | QV Score |  Error Rate |
+|-------------+---------+-----------+----------+-------------|
+| Kc          |  844493 | 561000044 |  41.4427 | 7.17341e-05 |
+| Kd-illumina | 2733634 | 552236957 |  36.2658 | 0.000236277 |
+| Kd-nanopore |  246780 | 552236957 |  46.7194 | 2.12842e-05 |
+| Kk          |  718928 | 555840957 |  42.1022 | 6.16287e-05 |
+
+** LAI
+
+#+header: :var anno=anno :var names=anno[,0]
+#+begin_src shell :tangle 6-lai/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+export BLAST_USAGE_REPORT=false
+
+name="${names[$SLURM_ARRAY_TASK_ID]}"
+readarray -t lib <<<"${anno[$name]}"
+gtf=${lib[0]}
+fasta=${lib[1]}
+
+cd $TMPDIR
+genome=$TMPDIR/$name.fa
+
+zcat $ROOT/wgs/$fasta |
+    sed '/>/s/_unplaced_/_Z/'> $genome
+
+singularity exec -B $ROOT -B $TMPDIR \
+        $DIR/apps/tetools-1.88.5.sif \
+        LTRPipeline --debug --threads 80 $genome
+
+tar -C $TMPDIR -cf $DIR/6-lai/$name.tar \
+    --transform='s#^./##' .
+#+end_src
+
+#+header: :var anno=anno :var names=anno[,0]
+#+begin_src shell :tangle 6-lai/next.sh
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
+
+export BLAST_USAGE_REPORT=false
+
+name="${names[$SLURM_ARRAY_TASK_ID]}"
+readarray -t lib <<<"${anno[$name]}"
+gtf=${lib[0]}
+fasta=${lib[1]}
+
+cd $TMPDIR
+genome=$TMPDIR/$name.fa
+
+zcat $ROOT/wgs/$fasta |
+    sed '/>/s/_unplaced_/_Z/'> $genome
+
+tar -C $TMPDIR -Oxf $DIR/6-lai/$name.tar */seq.fa.LTRlib.fa \
+    > $TMPDIR/repeats.fa
+tar -C $TMPDIR -Oxf $DIR/6-lai/$name.tar */seq.fa.pass.list \
+    > $TMPDIR/pass.list
+
+singularity exec -B $ROOT -B $TMPDIR \
+        $DIR/apps/tetools-1.88.5.sif \
+        RepeatMasker -pa 80 \
+        -lib $TMPDIR/repeats.fa \
+        $TMPDIR/$name.fa
+
+singularity exec -B $ROOT -B $TMPDIR \
+        $DIR/apps/tetools-1.88.5.sif \
+        /opt/LTR_retriever/LAI -genome $genome \
+        -intact $TMPDIR/pass.list \
+        -all $genome.out
+
+tar -C $TMPDIR -cf $DIR/6-lai/$name.tar \
+    --transform='s#^./##' .
+
+#+end_src

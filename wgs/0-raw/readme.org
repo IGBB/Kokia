@@ -1,5 +1,5 @@
 #+TITLE: Whole Genome Sequencing Samples
-#+PROPERTY:  header-args :var DIR=(my/dir)
+#+PROPERTY:  header-args :var DIR=(file-name-directory buffer-file-name)
 
 #+name: basecaller
 #+begin_src sh
@@ -63,9 +63,8 @@ table.
 | FAU92850.2 | Kk/20230217_1422_X5_FAU92850_880260d2/super.pass.tar |
 | FAU92850.3 | Kk/20230218_0141_X5_FAU92850_5e177b5a/super.pass.tar |
 
-- =tar= data :: =tar='ing =fastq= and =fast5= files to simplify transfer. Both
-  pass and fail =fast5= files are added together. The file name labels the data
-  as pass/fail. Running =md5sum= pre- and post- =tar= to validate.
+***  =tar= data
+=tar='ing =fastq= and =fast5= files to simplify transfer. Both pass and fail =fast5= files are added together. The file name labels the data as pass/fail. Running =md5sum= pre- and post- =tar= to validate.
   #+begin_src sh :tangle backup.nano.sh :var flowcells=kk-nanopore-runs[,1]
 
 check () {
@@ -135,14 +134,14 @@ done
 
   #+end_src
 
-- Super Basecalling
+*** Super Basecalling
 
-  #+header: :var flowcells=kk-nanopore-runs[,1]
-  #+begin_src shell :tangle basecall.kk.k14.sh :noweb yes
+#+header: :var flowcells=kk-nanopore-runs[,1]
+#+begin_src shell :tangle basecall.kk.k14.sh :noweb yes
 <<basecaller>>
-  #+end_src
+#+end_src
 
-  - =tar= sup basecalled reads
+- =tar= sup basecalled reads
 
     #+name: backup-sup
     #+header: :var flowcells=kk-nanopore-runs[8:10,1]
@@ -187,6 +186,7 @@ for id in "${flowcells[@]}"; do
 done
 
   #+end_src
+
 
 ** Hi-C
 
@@ -350,8 +350,7 @@ done
 
 *** Super Accurate Basecalling
 
-Two runs (0 and 2) had an issue, copied below, with read splitting. Removed the flag and
-reran just those.
+Two runs (0 and 2) had an issue, copied below, with read splitting. Removed the flag and reran just those.
 #+begin_quote
 [guppy/error] pipeline::ThreadedNode::worker_function: Exception thrown in
 dataHandlerNode worker thread: Basecall telemetry received for non-existent run
@@ -582,3 +581,30 @@ Hi-C library made by Phase-Genomics
 | Run        | Instrument  |
 |------------+-------------|
 | SRR6195950 | HiSeq X Ten |
+
+
+
+* SRA upload
+#+header: :var kk=kk-nanopore-sup
+#+header: :var kd=kd-nanopore-runs
+#+header: :var kc=kc-nanopore-sup
+#+begin_src sh :tangle for-ncbi/gather.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+for name in "${!kc[@]}"; do
+    file=${kc[$name]}
+    tar -Oxf $DIR/$file | zcat -f > $DIR/for-ncbi/$name.fq
+done
+
+for name in "${!kk[@]}"; do
+    file=${kk[$name]}
+    tar -Oxf $DIR/$file | zcat -f > $DIR/for-ncbi/$name.fq
+done
+
+for name in "${!kd[@]}"; do
+    file=${kd[$name]}
+    cp $DIR/$file/sup.pass.fq.gz $DIR/for-ncbi/$name.fq.gz
+done
+
+
+  #+end_src

@@ -11,7 +11,7 @@ assembly_stats \
 assembly_stats <( zcat $DIR/../1-assembly/5-curate/Kk.fa.gz )
 assembly_stats <( zcat $DIR/../1-assembly/5-curate/Kc.fa.gz )
 #+end_src
-* Heterzygousity
+* Heterzygousity (vcftools)
 
 Using clair3 (v1.0.5) and vcftools to quickly get heterozygosity
 
@@ -76,6 +76,34 @@ PATH=$DIR/apps/samtools-1.19/:$PATH
 SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
 vcftools --gzvcf $DIR/2-hetero/$spec/merge_output.vcf.gz \
-    --out $DIR/2-hetero/2-vcftools/$spec \
-    --het
+    --het --freqx \
+    --out $DIR/2-hetero/2-vcftools/$spec
     #+end_src
+*  Heterozygousity (angsd)
+  #+header: :var genomes=../3-centromere/readme.org:genomes
+  #+begin_src sh :tangle 2-hetero/3-angsd/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+
+PATH=$DIR/apps/angsd-0.940/:$PATH
+PATH=$DIR/apps/angsd-0.940/misc:$PATH
+PATH=$DIR/apps/samtools-1.19/:$PATH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+
+# Set spec with --export=spec=Kd
+
+zcat $ROOT/wgs/${genomes[$spec]} > $SCRATCH/$spec.all.fa
+samtools faidx $SCRATCH/$spec.all.fa \
+    ${spec}_{01,2_4,03} ${spec}_{05..13} \
+    > $SCRATCH/$spec.chr.fa
+
+samtools faidx $SCRATCH/$spec.chr.fa
+
+angsd -nThreads 8 \
+  -i $ROOT/wgs/3-centromere/1-meth/2-combine/$spec.bam \
+  -anc $SCRATCH/$spec.chr.fa \
+  -dosaf 1 -GL 1 \
+  -out $DIR/2-hetero/3-angsd/$spec.angsd
+
+realSFS -cores 8 -fold 1 $DIR/2-hetero/3-angsd/$spec.angsd.saf.idx \
+    > $DIR/2-hetero/3-angsd/$spec.ml
+  #+end_src

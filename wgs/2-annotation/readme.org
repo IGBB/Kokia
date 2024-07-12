@@ -4,47 +4,48 @@
 #+name:genomes
 | Name | Fasta                         |
 |------+-------------------------------|
-| Kc   | 1-assembly/5-curate/Kc.fa.gz  |
-| Kd   | 1-assembly/5-curate/Kd.fa.gz  |
-| Kk   | 1-assembly/5-curate/Kk.fa.gz  |
+| Kc   | 1-assembly/6-ncbi/Kc.fa.gz    |
+| Kd   | 1-assembly/6-ncbi/Kd.fa.gz    |
+| Kk   | 1-assembly/6-ncbi/Kk.fa.gz    |
 | Gk   | 1-assembly/0-ref/kirkii.fa.gz |
 
 * Repeats
 
 - Run RepeatModeler
+   #+header: :var names=genomes[,0]
    #+header: :var genomes=genomes
   #+begin_src sh :tangle 1-repeats/1-modeler.sh
-     ROOT=$(git rev-parse --show-toplevel)
-     ml singularity
+ROOT=$(git rev-parse --show-toplevel)
+ml singularity
 
-     line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
-     read name fasta <<<"$line"
+name=${names[$SLURM_ARRAY_TASK_ID]}
+fasta=${genomes[$name]}
 
-     export BLAST_USAGE_REPORT=false
+export BLAST_USAGE_REPORT=false
 
-     SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
-     cd $SCRATCH
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+cd $SCRATCH
 
-     singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
-                 BuildDatabase -name $SCRATCH/$name.db $ROOT/wgs/$fasta
-     singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
-                 RepeatModeler -database $SCRATCH/$name.db \
-                 -threads 48 -LTRStruct
+singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+    BuildDatabase -name $SCRATCH/$name.db $ROOT/wgs/$fasta
+singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
+    RepeatModeler -database $SCRATCH/$name.db \
+    -threads 48 -LTRStruct
 
-     mkdir $DIR/1-repeats/$name/
-     cp -r $SCRATCH $DIR/1-repeats/$name/modeler
+mkdir $DIR/1-repeats/$name/
+cp -r $SCRATCH $DIR/1-repeats/$name/modeler
   #+end_src
 
   #+RESULTS:
-
 - Run RepeatMasker
+   #+header: :var names=genomes[,0]
    #+header: :var genomes=genomes
   #+begin_src sh :tangle 1-repeats/2-masker.sh
 ROOT=$(git rev-parse --show-toplevel)
 ml singularity
 
-line=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
-read name fasta <<<"$line"
+name=${names[$SLURM_ARRAY_TASK_ID]}
+fasta=${genomes[$name]}
 
 export BLAST_USAGE_REPORT=false
 
@@ -54,42 +55,87 @@ cd $SCRATCH
 zcat -f $ROOT/wgs/$fasta > $SCRATCH/$name.fa
 
 singularity exec -B $ROOT -B $SCRATCH $DIR/apps/dfam-tetools-1.87.sif \
-            RepeatMasker -pa 48 \
-                          -lib $DIR/1-repeats/$name/modeler/$name.db-families.fa \
-                           $SCRATCH/$name.fa
+    RepeatMasker -pa 48 \
+    -lib $DIR/1-repeats/$name/modeler/$name.db-families.fa \
+    $SCRATCH/$name.fa
 
 cp -r $SCRATCH $DIR/1-repeats/$name/masker
 
   #+end_src
 
-* Braker3
-#+header: :var genomes=genomes[,0]
-#+begin_src sh :tangle 2-braker3/run.sh
-  ROOT=$(git rev-parse --show-toplevel)
-  name=$(sed -n ${SLURM_ARRAY_TASK_ID}p <<<"$genomes")
+** Stats
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote) :results verbatim
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation
 
-  ml singularity
-
-  SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
-  mkdir $DIR/2-braker3/$name
-  cd $DIR/2-braker3/$name
-
-  mkdir $DIR/2-braker3/$name/home
-  cp $HOME/.gm_key $DIR/2-braker3/$name/home
-
-  singularity exec --cleanenv -H $DIR/2-braker3/$name/home \
-                   -B $ROOT -B $SCRATCH \
-              $DIR/apps/braker3_v.1.0.4.1.sif braker.pl \
-                  --species=$name \
-                  --genome=$DIR/1-repeats/$name/masker/$name.fa.masked \
-                  --prot_seq=$DIR/2-braker3/Viridiplantae.fa \
-                  --threads=48 \
-                  --workingdir=$SCRATCH
-  cp -r $SCRATCH $DIR/2-braker3/$name/output
+for i in Kc Kd Kk; do
+    echo $i
+    sed -n -e 6,11p -e '/Unclass/p' \
+        -e '/Gypsy/p' -e '/Copia/p' \
+        $DIR/1-repeats/$i/masker/$i.fa.tbl
+done
 
 #+end_src
 
 #+RESULTS:
+#+begin_example
+Kc
+bases masked:  358827830 bp ( 63.95 %)
+==================================================
+               number of      length   percentage
+               elements*    occupied  of sequence
+--------------------------------------------------
+Retroelements       195300    179826335 bp   32.05 %
+     Ty1/Copia       40940     30504702 bp    5.44 %
+     Gypsy/DIRS1     80811    113574396 bp   20.24 %
+Unclassified:       545757    155544339 bp   27.72 %
+Kd
+bases masked:  357986290 bp ( 64.81 %)
+==================================================
+               number of      length   percentage
+               elements*    occupied  of sequence
+--------------------------------------------------
+Retroelements       207621    186045736 bp   33.68 %
+     Ty1/Copia       46300     37459444 bp    6.78 %
+     Gypsy/DIRS1     79402    117584542 bp   21.29 %
+Unclassified:       561032    148319733 bp   26.85 %
+Kk
+bases masked:  354105602 bp ( 63.69 %)
+==================================================
+               number of      length   percentage
+               elements*    occupied  of sequence
+--------------------------------------------------
+Retroelements       196638    182548991 bp   32.83 %
+     Ty1/Copia       52863     39684890 bp    7.14 %
+     Gypsy/DIRS1     82930    118589769 bp   21.33 %
+Unclassified:       554349    148629913 bp   26.73 %
+#+end_example
+
+* Braker3
+#+header: :var names=genomes[,0]
+#+begin_src sh :tangle 2-braker3/run.sh
+ROOT=$(git rev-parse --show-toplevel)
+name=${names[$SLURM_ARRAY_TASK_ID]}
+
+ml singularity
+
+SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
+mkdir $DIR/2-braker3/$name
+cd $DIR/2-braker3/$name
+
+mkdir $DIR/2-braker3/$name/home
+cp $HOME/.gm_key $DIR/2-braker3/$name/home
+
+singularity exec --cleanenv -H $DIR/2-braker3/$name/home \
+    -B $ROOT -B $SCRATCH \
+    $DIR/apps/braker3_v.1.0.4.1.sif braker.pl \
+    --species=$name \
+    --genome=$DIR/1-repeats/$name/masker/$name.fa.masked \
+    --prot_seq=$DIR/2-braker3/Viridiplantae.fa \
+    --threads=48 \
+    --workingdir=$SCRATCH
+cp -r $SCRATCH $DIR/2-braker3/$name/output
+
+#+end_src
 
 * Rename
 :PROPERTIES:
@@ -97,24 +143,34 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
 :END:
 #+header: :var genomes=genomes
   #+begin_src sh :tangle 3-rename.sh
-    ROOT=$(git rev-parse --show-toplevel)
+ROOT=$(git rev-parse --show-toplevel)
+PATH=$DIR/apps/gffread-0.12.7.Linux_x86_64/:$PATH
 
-      declare -A names 
-      names["Kc"]="Kocoo"
-      names["Kk"]="Kokau"
-      names["Kd"]="Kodry"
-      names["Gk"]="Gokir"
+declare -A names
+names["Kc"]="Kocoo"
+names["Kk"]="Kokau"
+names["Kd"]="Kodry"
+names["Gk"]="Gokir"
 
-      cat <<<"$genomes" |
-          grep 'Kc' |
-          while read i fasta; do
-              cp $ROOT/wgs/$fasta $DIR/${names[$i]}.fa.gz
-              
-  #            tar -O -xf 2-braker3/$i.tar braker.gtf |
-              cat $DIR/2-braker3/$i/output/braker.gtf |
-                  awk '$1 != chr { chr=$1; c=1;
-                                   num=$1; sub(".._", "0", num);
+#for i in "${!genomes[@]}"; do
+for i in Kc Kd Kk; do
+    fasta=${genomes[$i]}
+    cp $ROOT/wgs/$fasta $DIR/${names[$i]}.fa.gz
+
+    tmp_fa=$(mktemp)
+    zcat $ROOT/wgs/$fasta > $tmp_fa
+    tmp_gtf=$(mktemp)
+    #            tar -O -xf 2-braker3/$i.tar braker.gtf |
+    cat $DIR/2-braker3/$i/output/braker.gtf |
+        awk '$1 != chr { chr=$1; c=1;
+                                   num=$1;
+                                   if(num ~ /^K[cdkI]/){
+                                   sub(".._", "0", num);
                                    num=substr(num, length(num)-2, 3)
+                                   }else{
+                                   sub("^.*_", "Z", num);
+                                   }
+                                }
                        }
                        $3 == "gene" {
                            name = $9;
@@ -123,9 +179,18 @@ cp -r $SCRATCH $DIR/1-repeats/$name/masker
                        1 { gsub(name, rep, $9);
                            sub("\\.t", ".", $9);
                            print }' \
-                      FS="\t" OFS="\t" spec=${names[$i]} |
-                      gzip > $DIR/${names[$i]}.gtf.gz
-          done
+                               FS="\t" OFS="\t" spec=${names[$i]} |
+        tee $tmp_gtf |
+        gzip > $DIR/${names[$i]}.gtf.gz
+
+    gffread -J -y $DIR/${names[$i]}.pep.fa \
+        -w $DIR/${names[$i]}.cds.fa \
+        -g $tmp_fa $tmp_gtf
+
+    gzip $DIR/${names[$i]}.pep.fa $DIR/${names[$i]}.cds.fa
+
+    rm $tmp_fa $tmp_gtf
+done
   #+end_src
 
 
@@ -209,7 +274,7 @@ for name in ${!genomes[@]}; do
 done
 #+end_src
 
-Run iprscan on protein sequences. Sequences will be split into 20 batches each
+Run iprscan on protein sequences.
 #+begin_src sh :tangle 4-iprscan/run.sh
 ml singularity
 
@@ -220,12 +285,14 @@ SCRATCH=/local/scratch/tony.arick/$SLURM_JOB_ID/
 
 # Set spec with --export=spec=Kd
 
-PREFIX=$spec.pep.$SLURM_ARRAY_TASK_ID
+#PREFIX=$spec.pep.$SLURM_ARRAY_TASK_ID
+PREFIX=$spec.pep
 
-split -n "l/$SLURM_ARRAY_TASK_ID/20" $DIR/4-iprscan/$spec.pep.fa.fai |
-    cut -f 1 |
-    samtools faidx -r - $DIR/4-iprscan/$spec.pep.fa \
-        > $SCRATCH/$PREFIX.fa
+# split -n "l/$SLURM_ARRAY_TASK_ID/20" $DIR/4-iprscan/$spec.pep.fa.fai |
+#     cut -f 1 |
+#     samtools faidx -r - $DIR/4-iprscan/$spec.pep.fa \
+#         > $SCRATCH/$PREFIX.fa
+cp $DIR/4-iprscan/$spec.pep.fa $SCRATCH/$PREFIX.fa
 
 IPRDATA=$DIR/apps/interproscan-5.65-97.0/data
 singularity exec \
@@ -245,3 +312,85 @@ singularity exec \
 
 mv $SCRATCH/$PREFIX.{tsv,xml} $DIR/4-iprscan/
 #+end_src
+* Stats
+number of genes
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote)
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation
+for name in Kocoo Kodry Kokau; do
+    zcat $DIR/$name.gtf.gz |
+        awk '{_[$3]++} END {for ( i in _) print name, i, _[i];}' \
+            name=$name
+done | grep -e gene -e transcript
+#+end_src
+
+#+RESULTS:
+| Kocoo | gene       | 39268 |
+| Kocoo | transcript | 41953 |
+| Kodry | gene       | 38042 |
+| Kodry | transcript | 40766 |
+| Kokau | gene       | 39242 |
+| Kokau | transcript | 41898 |
+
+
+exon stats
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote)
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation
+
+for name in Kocoo Kodry Kokau; do
+    zcat $DIR/$name.gtf.old.gz |
+        awk '$3 == "exon" {_[$10]++}
+        END { for(i in _){ print _[i]; }}' name=$name |
+        Rscript -e "summary(as.numeric(readLines(file('stdin'))))"
+done
+#+end_src
+
+#+RESULTS:
+|       | Min. | 1st Qu. | Median |  Mean | 3rd Qu. | Max. |
+| Kocoo |  1.0 |     2.0 |    3.0 | 5.076 |     7.0 | 79.0 |
+| Kodry |  1.0 |     2.0 |    4.0 |  5.26 |     7.0 | 79.0 |
+| Kokau |  1.0 |     2.0 |    3.0 | 5.158 |     7.0 | 79.0 |
+
+
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote)
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation
+
+for name in Kocoo Kodry Kokau; do
+    zcat $DIR/$name.gtf.old.gz |
+        awk '$3 == "exon" {_[$10]++}
+        END { for(i in _){ print _[i]; }}' name=$name |
+        Rscript -e "table(as.numeric(readLines(file('stdin')))==1)"
+done
+#+end_src
+
+#+RESULTS:
+|       | singleton |
+| Kocoo |      8914 |
+| Kodry |      7550 |
+| Kokau |      8368 |
+
+| Kocoo | gene       | 39268 | 8914 | 22.700418 |
+| Kodry | gene       | 38042 | 7550 | 19.846485 |
+| Kokau | gene       | 39242 | 8368 | 21.324092 |
+
+| Kocoo | transcript | 41953 | 8914 | 21.247587 |
+| Kodry | transcript | 40766 | 7550 | 18.520336 |
+| Kokau | transcript | 41898 | 8368 | 19.972314 |
+#+TBLFM: $5=$4*100/$3
+
+
+
+#+begin_src sh :dir (symbol-value 'ssh-deploy-root-remote)
+DIR=/90daydata/gbru_kokia/Kokia/wgs/2-annotation
+name=Kocoo
+for name in Kocoo Kodry Kokau; do
+    zcat $DIR/$name.gtf.old.gz |
+        awk '$3 == "exon" {print $5 - $4}' |
+        Rscript -e "summary(as.numeric(readLines(file('stdin'))))"
+done
+#+end_src
+
+#+RESULTS:
+|       | Min. | 1st Qu. | Median |  Mean | 3rd Qu. | Max. |
+| Kocoo |    2 |      80 |    128 |   219 |     234 | 6073 |
+| Kodry |    2 |      79 |    127 | 215.9 |     230 | 6073 |
+| Kokau |    2 |      80 |    128 | 218.7 |     232 | 8249 |
